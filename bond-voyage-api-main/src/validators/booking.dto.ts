@@ -102,6 +102,10 @@ export const bookingIdParamDto = z.object({
   id: z.string().uuid(),
 });
 
+export const collaboratorIdParamDto = z.object({
+  collaboratorId: z.string().uuid(),
+});
+
 export const bookingListQueryDto = z.object({
   page: z.preprocess((val) => parseNumber(val, 1), z.number().int().min(1)),
   limit: z.preprocess((val) => parseNumber(val, 10), z.number().int().min(1)),

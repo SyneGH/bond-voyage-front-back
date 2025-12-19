@@ -10,6 +10,7 @@ import { registerDto } from "@/validators/auth.dto";
 import {
   changePasswordDto,
   updateProfileDto,
+  updateUserAdminDto,
   userIdParamDto,
   userListQueryDto,
 } from "@/validators/user.dto";
@@ -247,6 +248,36 @@ class UserController {
         throw error;
       }
       throwError(HTTP_STATUS.NOT_FOUND, "User not found", error);
+    }
+  };
+
+  public updateUserById = async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<void> => {
+    try {
+      const { id: userId } = userIdParamDto.parse(req.params);
+      const payload = updateUserAdminDto.parse(req.body);
+
+      const user = await userService.updateById(userId, payload);
+
+      if (!user) {
+        throwError(HTTP_STATUS.NOT_FOUND, "User not found");
+      }
+
+      await this.invalidateUserCaches(userId);
+
+      createResponse(res, HTTP_STATUS.OK, "User updated successfully", {
+        user: userService.transformUser(user),
+      });
+    } catch (error) {
+      if (error instanceof ZodError) {
+        throwError(HTTP_STATUS.BAD_REQUEST, "Validation failed", error.errors);
+      }
+      if (error instanceof AppError) {
+        throw error;
+      }
+      throwError(HTTP_STATUS.BAD_REQUEST, "Failed to update user", error);
     }
   };
 
