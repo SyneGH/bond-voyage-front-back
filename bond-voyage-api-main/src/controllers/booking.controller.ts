@@ -4,6 +4,7 @@ import { BookingService } from "@/services/booking.service";
 import {
   bookingIdParamDto,
   bookingListQueryDto,
+  collaboratorIdParamDto,
   createBookingDto,
   updateItineraryDto,
   updateStatusDto,
@@ -12,6 +13,8 @@ import { BookingStatus } from "@prisma/client";
 import { AppError, createResponse, throwError } from "@/utils/responseHandler";
 import { HTTP_STATUS } from "@/constants/constants";
 import { ZodError } from "zod";
+import { addCollaboratorDto } from "@/validators/collaboration.dto";
+import userService from "@/services/user.service";
 
 export const BookingController = {
   // POST /api/bookings
@@ -54,7 +57,13 @@ export const BookingController = {
       }
 
       if (req.user?.role !== "ADMIN" && booking.userId !== req.user?.userId) {
-        throwError(HTTP_STATUS.FORBIDDEN, "Forbidden");
+        const isCollaborator = booking.collaborators?.some(
+          (collab) => collab.userId === req.user?.userId
+        );
+
+        if (!isCollaborator) {
+          throwError(HTTP_STATUS.FORBIDDEN, "Forbidden");
+        }
       }
 
       createResponse(res, HTTP_STATUS.OK, "Booking retrieved", booking);
@@ -99,6 +108,12 @@ export const BookingController = {
       }
       if (error?.message === "BOOKING_NOT_EDITABLE") {
         throwError(HTTP_STATUS.CONFLICT, "Booking cannot be modified");
+      }
+      if (error?.message === "BOOKING_COLLABORATOR_NOT_ALLOWED") {
+        throwError(HTTP_STATUS.CONFLICT, "Collaborators can edit only in draft");
+      }
+      if (error?.message === "BOOKING_FORBIDDEN") {
+        throwError(HTTP_STATUS.FORBIDDEN, "Forbidden");
       }
       if (error?.message === "BOOKING_NOT_FOUND") {
         throwError(HTTP_STATUS.NOT_FOUND, "Booking not found");
@@ -295,6 +310,140 @@ export const BookingController = {
       throwError(
         HTTP_STATUS.INTERNAL_SERVER_ERROR,
         "Internal Server Error",
+        error
+      );
+    }
+  },
+
+  // POST /api/bookings/:id/collaborators
+  addCollaborator: async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<void> => {
+    try {
+      if (!req.user?.userId) {
+        throwError(HTTP_STATUS.UNAUTHORIZED, "Unauthorized");
+      }
+
+      const { id } = bookingIdParamDto.parse(req.params);
+      const payload = addCollaboratorDto.parse(req.body);
+
+      let collaboratorId = payload.userId;
+
+      if (!collaboratorId && payload.email) {
+        const user = await userService.findByEmail(payload.email);
+        if (!user) {
+          throwError(HTTP_STATUS.NOT_FOUND, "Collaborator not found");
+        }
+        collaboratorId = user.id;
+      }
+
+      if (!collaboratorId) {
+        throwError(HTTP_STATUS.BAD_REQUEST, "Collaborator identifier required");
+      }
+
+      const collaborator = await BookingService.addCollaborator(
+        id,
+        req.user.userId,
+        collaboratorId
+      );
+
+      createResponse(res, HTTP_STATUS.CREATED, "Collaborator added", collaborator);
+    } catch (error: any) {
+      if (error instanceof ZodError) {
+        throwError(HTTP_STATUS.BAD_REQUEST, "Validation failed", error.errors);
+      }
+      if (error instanceof AppError) {
+        throw error;
+      }
+      if (error?.message === "BOOKING_NOT_FOUND") {
+        throwError(HTTP_STATUS.NOT_FOUND, "Booking not found");
+      }
+      if (error?.message === "COLLABORATOR_EXISTS") {
+        throwError(HTTP_STATUS.CONFLICT, "Collaborator already added");
+      }
+      if (error?.message === "CANNOT_ADD_OWNER") {
+        throwError(HTTP_STATUS.CONFLICT, "Owner cannot be collaborator");
+      }
+      throwError(
+        HTTP_STATUS.INTERNAL_SERVER_ERROR,
+        "Failed to add collaborator",
+        error
+      );
+    }
+  },
+
+  // GET /api/bookings/:id/collaborators
+  listCollaborators: async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<void> => {
+    try {
+      if (!req.user?.userId) {
+        throwError(HTTP_STATUS.UNAUTHORIZED, "Unauthorized");
+      }
+
+      const { id } = bookingIdParamDto.parse(req.params);
+      const collaborators = await BookingService.listCollaborators(
+        id,
+        req.user.userId
+      );
+
+      createResponse(res, HTTP_STATUS.OK, "Collaborators retrieved", collaborators);
+    } catch (error: any) {
+      if (error instanceof ZodError) {
+        throwError(HTTP_STATUS.BAD_REQUEST, "Validation failed", error.errors);
+      }
+      if (error instanceof AppError) {
+        throw error;
+      }
+      if (error?.message === "BOOKING_NOT_FOUND") {
+        throwError(HTTP_STATUS.NOT_FOUND, "Booking not found");
+      }
+      if (error?.message === "BOOKING_FORBIDDEN") {
+        throwError(HTTP_STATUS.FORBIDDEN, "Forbidden");
+      }
+      throwError(
+        HTTP_STATUS.INTERNAL_SERVER_ERROR,
+        "Failed to fetch collaborators",
+        error
+      );
+    }
+  },
+
+  // DELETE /api/bookings/:id/collaborators/:collaboratorId
+  removeCollaborator: async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<void> => {
+    try {
+      if (!req.user?.userId) {
+        throwError(HTTP_STATUS.UNAUTHORIZED, "Unauthorized");
+      }
+
+      const { id } = bookingIdParamDto.parse(req.params);
+      const { collaboratorId } = collaboratorIdParamDto.parse(req.params);
+
+      await BookingService.removeCollaborator(
+        id,
+        req.user.userId,
+        collaboratorId
+      );
+
+      createResponse(res, HTTP_STATUS.OK, "Collaborator removed");
+    } catch (error: any) {
+      if (error instanceof ZodError) {
+        throwError(HTTP_STATUS.BAD_REQUEST, "Validation failed", error.errors);
+      }
+      if (error instanceof AppError) {
+        throw error;
+      }
+      if (error?.message === "BOOKING_NOT_FOUND") {
+        throwError(HTTP_STATUS.NOT_FOUND, "Booking not found");
+      }
+      throwError(
+        HTTP_STATUS.INTERNAL_SERVER_ERROR,
+        "Failed to remove collaborator",
         error
       );
     }

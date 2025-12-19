@@ -1,6 +1,5 @@
 import { BookingStatus, Prisma } from "@prisma/client";
 import { prisma } from "@/config/database";
-import { logActivity } from "./activity-log.service";
 
 interface CreateBookingDTO {
   userId: string;
@@ -64,6 +63,13 @@ export const BookingService = {
       include: {
         user: { select: { email: true, firstName: true, lastName: true } },
         payments: true,
+        collaborators: {
+          include: {
+            user: {
+              select: { id: true, firstName: true, lastName: true, email: true },
+            },
+          },
+        },
         itinerary: {
           orderBy: { dayNumber: "asc" },
           include: { activities: { orderBy: { order: "asc" } } },
@@ -78,14 +84,27 @@ export const BookingService = {
     data: Omit<CreateBookingDTO, "userId" | "type" | "tourType">
   ) {
     return prisma.$transaction(async (tx) => {
-      const booking = await tx.booking.findFirst({
-        where: { id: bookingId, userId },
+      const booking = await tx.booking.findUnique({
+        where: { id: bookingId },
+        include: { collaborators: true },
       });
 
       if (!booking) throw new Error("BOOKING_NOT_FOUND");
 
-      // Allow editing for DRAFT, PENDING, REJECTED (common UX)
-      if (!["DRAFT", "PENDING", "REJECTED"].includes(booking.status)) {
+      const isOwner = booking.userId === userId;
+      const isCollaborator = booking.collaborators.some(
+        (collab) => collab.userId === userId
+      );
+
+      if (!isOwner && !isCollaborator) {
+        throw new Error("BOOKING_FORBIDDEN");
+      }
+
+      if (isCollaborator && booking.status !== "DRAFT") {
+        throw new Error("BOOKING_COLLABORATOR_NOT_ALLOWED");
+      }
+
+      if (isOwner && !["DRAFT", "PENDING", "REJECTED"].includes(booking.status)) {
         throw new Error("BOOKING_NOT_EDITABLE");
       }
 
@@ -270,6 +289,91 @@ export const BookingService = {
     return prisma.booking.update({
       where: { id: bookingId },
       data: { status: "CANCELLED", isResolved: true },
+    });
+  },
+
+  async addCollaborator(
+    bookingId: string,
+    ownerId: string,
+    collaboratorId: string
+  ) {
+    return prisma.$transaction(async (tx) => {
+      const booking = await tx.booking.findFirst({
+        where: { id: bookingId, userId: ownerId },
+      });
+
+      if (!booking) throw new Error("BOOKING_NOT_FOUND");
+
+      if (booking.userId === collaboratorId) {
+        throw new Error("CANNOT_ADD_OWNER");
+      }
+
+      const existing = await tx.bookingCollaborator.findUnique({
+        where: {
+          bookingId_userId: {
+            bookingId,
+            userId: collaboratorId,
+          },
+        },
+      });
+
+      if (existing) {
+        throw new Error("COLLABORATOR_EXISTS");
+      }
+
+      return tx.bookingCollaborator.create({
+        data: {
+          bookingId,
+          userId: collaboratorId,
+        },
+      });
+    });
+  },
+
+  async listCollaborators(bookingId: string, userId: string) {
+    const booking = await prisma.booking.findUnique({
+      where: { id: bookingId },
+      include: {
+        collaborators: {
+          include: {
+            user: {
+              select: { id: true, firstName: true, lastName: true, email: true },
+            },
+          },
+        },
+      },
+    });
+
+    if (!booking) throw new Error("BOOKING_NOT_FOUND");
+
+    const isOwner = booking.userId === userId;
+    const isCollaborator = booking.collaborators.some(
+      (collab) => collab.userId === userId
+    );
+
+    if (!isOwner && !isCollaborator) {
+      throw new Error("BOOKING_FORBIDDEN");
+    }
+
+    return booking.collaborators;
+  },
+
+  async removeCollaborator(
+    bookingId: string,
+    ownerId: string,
+    collaboratorId: string
+  ) {
+    const booking = await prisma.booking.findFirst({
+      where: { id: bookingId, userId: ownerId },
+    });
+
+    if (!booking) throw new Error("BOOKING_NOT_FOUND");
+
+    return prisma.bookingCollaborator.deleteMany({
+      where: {
+        bookingId,
+        userId: collaboratorId,
+      },
     });
   },
 };

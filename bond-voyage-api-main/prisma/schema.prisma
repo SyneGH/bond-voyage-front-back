@@ -55,6 +55,24 @@ enum PaymentStatus {
   REJECTED
 }
 
+enum CollaboratorRole {
+  OWNER
+  COLLABORATOR
+}
+
+enum InquiryStatus {
+  OPEN
+  CLOSED
+}
+
+enum NotificationType {
+  BOOKING
+  PAYMENT
+  INQUIRY
+  FEEDBACK
+  SYSTEM
+}
+
 // =========================================
 // CORE MODELS
 // =========================================
@@ -83,9 +101,13 @@ model User {
 
   // Relations
   bookings      Booking[]
+  collaborations BookingCollaborator[]
   feedback      Feedback[]
+  respondedFeedback Feedback[] @relation("feedback_responses")
   activityLogs  ActivityLog[]
-  // inquiries     Inquiry[]
+  inquiries     Inquiry[]
+  messages      Message[]
+  notifications Notification[]
   
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
@@ -96,12 +118,17 @@ model User {
 // For "Standard" trips (Templates created by Admins)
 model TourPackage {
   id          String   @id @default(uuid())
+  title       String
   destination String
+  category    String?
+  description String?
   
   price       Decimal  @db.Decimal(10, 2)
   duration    Int      // Number of days
   thumbUrl    String?
   isActive    Boolean  @default(true)
+
+  days        TourPackageDay[]
 
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -134,6 +161,7 @@ model Booking {
   // Relations
   itinerary       ItineraryDay[]
   payments        Payment[]
+  collaborators   BookingCollaborator[]
   
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
@@ -183,6 +211,8 @@ model Payment {
   id            String        @id @default(uuid())
   bookingId     String
   booking       Booking       @relation(fields: [bookingId], references: [id])
+  submittedById String?
+  submittedBy   User?         @relation(fields: [submittedById], references: [id])
   
   amount        Decimal       @db.Decimal(10, 2)
   method        PaymentMethod @default(GCASH)
@@ -193,6 +223,7 @@ model Payment {
   transactionId String?       
   
   createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
 
   @@map("payments")
 }
@@ -205,9 +236,13 @@ model Feedback {
   id          String   @id @default(uuid())
   userId      String
   user        User     @relation(fields: [userId], references: [id])
+  respondedById String?
+  respondedBy  User?    @relation("feedback_responses", fields: [respondedById], references: [id])
   
   rating      Int      
   comment     String?
+  response    String?
+  respondedAt DateTime?
   
   createdAt   DateTime @default(now())
 
@@ -228,35 +263,104 @@ model ActivityLog {
 }
 
 // =========================================
-// DEFERRED: INQUIRY & MESSAGING
+// STANDARD ITINERARIES
 // =========================================
 
-// model Inquiry {
-//   id          String    @id @default(uuid())
-//   userId      String
-//   user        User      @relation(fields: [userId], references: [id])
-  
-//   subject     String
-//   status      String    @default("OPEN") 
-  
-//   messages    Message[]
-  
-//   createdAt   DateTime  @default(now())
-//   updatedAt   DateTime  @updatedAt
+model TourPackageDay {
+  id            String          @id @default(uuid())
+  tourPackageId String
+  tourPackage   TourPackage     @relation(fields: [tourPackageId], references: [id], onDelete: Cascade)
 
-//   @@map("inquiries")
-// }
+  dayNumber     Int
+  title         String?
 
-// model Message {
-//   id        String   @id @default(uuid())
-//   inquiryId String
-//   inquiry   Inquiry  @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
-  
-//   senderId  String   
-//   content   String
-//   isRead    Boolean  @default(false)
-  
-//   sentAt    DateTime @default(now())
+  activities    TourPackageActivity[]
 
-//   @@map("messages")
-// }
+  @@unique([tourPackageId, dayNumber])
+  @@map("tour_package_days")
+}
+
+model TourPackageActivity {
+  id              String         @id @default(uuid())
+  tourPackageDayId String
+  tourPackageDay  TourPackageDay @relation(fields: [tourPackageDayId], references: [id], onDelete: Cascade)
+
+  time            String
+  title           String
+  description     String?
+  location        String?
+  icon            String?
+  order           Int
+
+  @@map("tour_package_activities")
+}
+
+// =========================================
+// COLLABORATION
+// =========================================
+
+model BookingCollaborator {
+  id        String           @id @default(uuid())
+  bookingId String
+  booking   Booking          @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role      CollaboratorRole @default(COLLABORATOR)
+  addedAt   DateTime         @default(now())
+
+  @@unique([bookingId, userId])
+  @@map("booking_collaborators")
+}
+
+// =========================================
+// INQUIRY & MESSAGING
+// =========================================
+
+model Inquiry {
+  id        String        @id @default(uuid())
+  userId    String
+  user      User          @relation(fields: [userId], references: [id])
+
+  subject   String
+  status    InquiryStatus @default(OPEN)
+
+  messages  Message[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("inquiries")
+}
+
+model Message {
+  id        String   @id @default(uuid())
+  inquiryId String
+  inquiry   Inquiry  @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
+
+  senderId  String
+  sender    User     @relation(fields: [senderId], references: [id])
+  content   String
+  isRead    Boolean  @default(false)
+
+  sentAt    DateTime @default(now())
+
+  @@map("messages")
+}
+
+// =========================================
+// NOTIFICATIONS
+// =========================================
+
+model Notification {
+  id        String           @id @default(uuid())
+  userId    String
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      NotificationType @default(SYSTEM)
+  title     String?
+  message   String
+  data      Json?
+  isRead    Boolean          @default(false)
+  createdAt DateTime         @default(now())
+
+  @@map("notifications")
+}

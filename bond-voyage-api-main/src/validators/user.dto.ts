@@ -52,3 +52,8 @@ export const userListQueryDto = z.object({
 export const userIdParamDto = z.object({
   id: z.string().uuid(),
 });
+
+export const updateUserAdminDto = z.object({
+  role: z.enum(["USER", "ADMIN"]).optional(),
+  isActive: z.boolean().optional(),
+});
