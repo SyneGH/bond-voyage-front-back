@@ -1,0 +1,24 @@
+export const HTTP_STATUS = {
+  OK: 200,
+  CREATED: 201,
+  BAD_REQUEST: 400,
+  UNAUTHORIZED: 401,
+  FORBIDDEN: 403,
+  NOT_FOUND: 404,
+  CONFLICT: 409,
+  INTERNAL_SERVER_ERROR: 500,
+} as const;
+
+export const Role = {
+  USER: "USER",
+  ADMIN: "ADMIN",
+} as const;
+
+export const ROLES_ARRAY = Object.values(Role);
+
+export const DECIMAL_RADIX = 10;
+
+export const BCRYPT_SALT_ROUNDS = parseInt(
+  process.env.BCRYPT_SALT_ROUNDS || "12",
+  DECIMAL_RADIX
+);

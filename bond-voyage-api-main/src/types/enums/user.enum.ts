@@ -1,0 +1,10 @@
+export const UserEnum = {
+  FIRST_NAME_MIN: 2,
+  FIRST_NAME_MAX: 50,
+  MIDDLE_NAME_MIN: 2,
+  MIDDLE_NAME_MAX: 50,
+  LAST_NAME_MIN: 2,
+  LAST_NAME_MAX: 50,
+  PHONE_MIN: 10,
+  EMPLOYEE_ID_MIN: 3,
+} as const;

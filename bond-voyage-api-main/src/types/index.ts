@@ -1,0 +1,83 @@
+import { Request } from "express";
+import { UserRole, User } from "@prisma/client";
+
+export interface ApiResponse<T = any> {
+  success: boolean;
+  message: string;
+  data?: T;
+}
+
+export interface TokenPayload {
+  userId: string;
+  email: string;
+  phoneNumber: string;
+  role: string;
+  iat?: number;
+  exp?: number;
+}
+
+export interface AuthenticatedRequest extends Request {
+  user?: {
+    userId: string;
+    email: string;
+    role: string;
+  };
+}
+
+export interface RegisterDto {
+  firstName: string;
+  middleName?: string;
+  lastName: string;
+  phoneNumber: string;
+  birthday: string;
+  employeeId?: string;
+  email: string;
+  password: string;
+  role: UserRole;
+}
+
+export interface LoginDto {
+  email: string;
+  password: string;
+}
+
+export interface UserUpdateDto {
+  firstName?: string;
+  middleName?: string;
+  lastName?: string;
+  email?: string;
+}
+
+export interface ChangePasswordDto {
+  oldPassword: string;
+  newPassword: string;
+}
+
+// Profile Data Types for Login Response
+export interface AdminProfileData {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  location: string;
+  companyName: string;
+  yearsInOperation: string;
+  customerRating: string;
+}
+
+export interface UserProfileData {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  address: string;
+}
+
+export type ProfileData = AdminProfileData | UserProfileData;
+
+export interface LoginResponse {
+  accessToken: string;
+  user: ProfileData;
+}
+
+export type IUser = User;

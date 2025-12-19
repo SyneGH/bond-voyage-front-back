@@ -1,0 +1,141 @@
+@baseUrl = https://bond-voyage-api.onrender.com/api/v1/auth
+@email = felixangelomelgar5@gmail.com
+@password = Password123!
+
+### 1. HEALTH CHECK (Verify Server is Alive)
+GET https://bond-voyage-api.onrender.com/api/v1/health
+
+### ---------------------------------------------------
+### 2. AUTHENTICATION TESTS
+### ---------------------------------------------------
+
+### A. SIGNUP (Register a new user)
+# Expected: 201 Created
+POST {{baseUrl}}/register
+Content-Type: application/json
+
+{
+    "email": "{{email}}",
+    "password": "{{password}}",
+    "firstName": "Felix",
+    "lastName": "Melgar",
+    "phoneNumber": "09612133520",
+    "role": "USER"
+}
+
+### B. LOGIN (Get Access Token)
+# Expected: 200 OK (Returns accessToken + User Data)
+# Note: This will also set a 'refreshToken' cookie in the background
+POST {{baseUrl}}/login
+Content-Type: application/json
+
+{
+    "email": "{{email}}",
+    "password": "{{password}}"
+}
+
+### ---------------------------------------------------
+### 3. OTP & EMAIL TESTS
+### ---------------------------------------------------
+
+### C. SEND OTP
+# Expected: 200 OK (Will fail if RESEND_API_KEY is not set in Render)
+POST {{baseUrl}}/send-otp
+Content-Type: application/json
+
+{
+    "email": "{{email}}",
+    "firstName": "Bond"
+}
+
+### D. VERIFY OTP
+# Note: You need to check your email (or Redis logs) to get the real code.
+# Replace '123456' with the code you actually receive.
+POST {{baseUrl}}/verify-otp
+Content-Type: application/json
+
+{
+    "email": "{{email}}",
+    "otp": "977841"
+}
+
+### ---------------------------------------------------
+### 4. PASSWORD RESET
+### ---------------------------------------------------
+
+### E. RESET PASSWORD
+# Warning: Your current code allows reset without an OTP token verification step.
+# It just asks for email and new password.
+POST {{baseUrl}}/reset-password
+Content-Type: application/json
+
+{
+    "email": "{{email}}",
+    "newPassword": "NewPassword456!"
+}
+
+### ---------------------------------------------------
+### 5. SECURE PASSWORD RESET FLOW
+### ---------------------------------------------------
+
+@resetEmail = felixangelomelgar5@gmail.com
+# Use a new password to differentiate from previous tests
+@newSecurePassword = NewSecurePass789!
+
+### Step A: Send OTP
+# Expected: 200 OK (Check your email inbox for the code)
+POST {{baseUrl}}/send-otp
+Content-Type: application/json
+
+{
+    "email": "{{resetEmail}}",
+    "firstName": "Tester"
+}
+
+### Step B: Verify OTP (Authorize the session)
+# REPLACE '123456' with the code you just received in your email.
+# Expected: 200 OK.
+# Behind the scenes: Server creates a 'reset_session' flag in Redis valid for 5 mins.
+POST {{baseUrl}}/verify-otp
+Content-Type: application/json
+
+{
+    "email": "{{resetEmail}}",
+    "otp": "962904" 
+}
+
+### Step C: Attempt Reset (With Valid Session)
+# Expected: 200 OK "Password reset successful"
+# This will ONLY work if you ran Step B successfully within the last 5 minutes.
+POST {{baseUrl}}/reset-password
+Content-Type: application/json
+
+{
+    "email": "{{resetEmail}}",
+    "newPassword": "{{newSecurePassword}}"
+}
+
+### Step D: Verify New Password (Login)
+# Expected: 200 OK
+POST {{baseUrl}}/login
+Content-Type: application/json
+
+{
+    "email": "{{resetEmail}}",
+    "password": "{{newSecurePassword}}"
+}
+
+### ---------------------------------------------------
+### SECURITY CHECK (Negative Test)
+### ---------------------------------------------------
+
+### Step E: Attempt Reset WITHOUT OTP (Hacker simulation)
+# Expected: 401 Unauthorized "Session expired or unauthorized"
+# This proves your API is now secure.
+POST {{baseUrl}}/reset-password
+Content-Type: application/json
+
+{
+    "email": "{{resetEmail}}",
+    "newPassword": "HackerPassword000!"
+}
