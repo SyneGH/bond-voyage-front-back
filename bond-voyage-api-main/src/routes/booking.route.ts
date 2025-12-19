@@ -3,54 +3,43 @@ import { BookingController } from "@/controllers/booking.controller";
 import { authenticate, authorize } from "@/middlewares/auth.middleware";
 import { Role } from "@/constants/constants";
 import { bookingRateLimit } from "@/middlewares/rate-limit.middleware";
+import { asyncHandler } from "@/middlewares/async.middleware";
 
 const router = Router();
 
 router.use(authenticate);
 
-// USER: list first (must be before "/:id")
-router.get("/my-bookings", BookingController.getMyBookings);
+// USER: list
+router.get("/my-bookings", asyncHandler(BookingController.getMyBookings));
 
 // USER: create
-router.post("/", BookingController.create);
+router.post("/", bookingRateLimit, asyncHandler(BookingController.create));
 
 // USER: submit, cancel
-router.patch("/:id/submit", BookingController.submit);
-router.patch("/:id/cancel", BookingController.cancel);
+router.patch("/:id/submit", bookingRateLimit, asyncHandler(BookingController.submit));
+router.patch("/:id/cancel", asyncHandler(BookingController.cancel));
 
 // USER: edit itinerary
-router.put("/:id", BookingController.updateItinerary);
+router.put("/:id", asyncHandler(BookingController.updateItinerary));
 
 // USER: delete draft
-router.delete("/:id", BookingController.deleteDraft);
+router.delete("/:id", asyncHandler(BookingController.deleteDraft));
 
 // USER/ADMIN: detail
-router.get("/:id", BookingController.getOne);
+router.get("/:id", asyncHandler(BookingController.getOne));
 
 // ADMIN: list all (with optional status filter)
 router.get(
   "/admin/bookings",
   authorize([Role.ADMIN]),
-  BookingController.getAllBookings
+  asyncHandler(BookingController.getAllBookings)
 );
 
 // ADMIN: approve/reject
 router.patch(
   "/:id/status",
   authorize([Role.ADMIN]),
-  BookingController.updateStatus
-);
-
-router.post(
-  "/",
-  bookingRateLimit,
-  BookingController.create
-);
-
-router.patch(
-  "/:id/submit",
-  bookingRateLimit,
-  BookingController.submit
+  asyncHandler(BookingController.updateStatus)
 );
 
 export default router;

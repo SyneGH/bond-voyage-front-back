@@ -1,10 +1,11 @@
 import { Request } from "express";
 import { UserRole, User } from "@prisma/client";
 
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = any, M = any> {
   success: boolean;
   message: string;
   data?: T;
+  meta?: M;
 }
 
 export interface TokenPayload {
@@ -33,7 +34,8 @@ export interface RegisterDto {
   employeeId?: string;
   email: string;
   password: string;
-  role: UserRole;
+  role?: UserRole;
+  companyName?: string | null;
 }
 
 export interface LoginDto {

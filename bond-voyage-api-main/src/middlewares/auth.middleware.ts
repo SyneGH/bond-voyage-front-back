@@ -1,9 +1,9 @@
 import { Response, NextFunction } from "express";
-import { AuthenticatedRequest, ApiResponse } from "@/types";
+import { AuthenticatedRequest } from "@/types";
 import { AuthUtils } from "@/utils/auth";
 import userService from "@/services/user.service";
 import { HTTP_STATUS } from "@/constants/constants";
-import { createResponse } from "@/utils/response";
+import { createResponse } from "@/utils/responseHandler";
 
 export const authenticate = async (
   req: AuthenticatedRequest,
@@ -14,12 +14,7 @@ export const authenticate = async (
     const authHeader = req.headers.authorization;
 
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      const response: ApiResponse = createResponse(
-        false,
-        "Access token is required"
-      );
-
-      res.status(HTTP_STATUS.UNAUTHORIZED).json(response);
+      createResponse(res, HTTP_STATUS.UNAUTHORIZED, "Access token is required");
       return;
     }
 
@@ -31,12 +26,7 @@ export const authenticate = async (
       const user = await userService.findById(decoded.userId);
 
       if (!user || !user.isActive) {
-        const response: ApiResponse = createResponse(
-          false,
-          "User not found or inactive"
-        );
-
-        res.status(HTTP_STATUS.UNAUTHORIZED).json(response);
+        createResponse(res, HTTP_STATUS.UNAUTHORIZED, "User not found or inactive");
         return;
       }
 
@@ -48,22 +38,16 @@ export const authenticate = async (
 
       next();
     } catch (error) {
-      const response: ApiResponse = createResponse(
-        false,
-        "Invalid or expired access token"
-      );
-
-      res.status(HTTP_STATUS.UNAUTHORIZED).json(response);
+      createResponse(res, HTTP_STATUS.UNAUTHORIZED, "Invalid or expired access token");
       return;
     }
   } catch (error) {
-    const response: ApiResponse = createResponse(
-      false,
+    createResponse(
+      res,
+      HTTP_STATUS.INTERNAL_SERVER_ERROR,
       "Authentication Error",
-      error instanceof Error ? error.message : "Unknown error"
+      error instanceof Error ? { message: error.message } : undefined
     );
-
-    res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json(response);
   }
 };
 
@@ -74,22 +58,12 @@ export const authorize = (roles: string[]) => {
     next: NextFunction
   ): void => {
     if (!req.user) {
-      const response: ApiResponse = createResponse(
-        false,
-        "Authentication required"
-      );
-
-      res.status(HTTP_STATUS.UNAUTHORIZED).json(response);
+      createResponse(res, HTTP_STATUS.UNAUTHORIZED, "Authentication required");
       return;
     }
 
     if (!roles.includes(req.user.role)) {
-      const response: ApiResponse = createResponse(
-        false,
-        "Insufficient permissions"
-      );
-
-      res.status(HTTP_STATUS.FORBIDDEN).json(response);
+      createResponse(res, HTTP_STATUS.FORBIDDEN, "Insufficient permissions");
       return;
     }
 

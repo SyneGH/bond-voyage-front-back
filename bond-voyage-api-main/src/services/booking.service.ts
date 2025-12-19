@@ -193,14 +193,36 @@ export const BookingService = {
     };
   },
 
-  async getAllBookings(status?: BookingStatus) {
-    return prisma.booking.findMany({
-      where: status ? { status } : undefined,
-      include: {
-        user: { select: { firstName: true, lastName: true, email: true } },
+  async getAllBookingsPaginated(
+    status?: BookingStatus,
+    page = 1,
+    limit = 10
+  ) {
+    const skip = (page - 1) * limit;
+    const whereClause = status ? { status } : undefined;
+
+    const [items, total] = await prisma.$transaction([
+      prisma.booking.findMany({
+        where: whereClause,
+        include: {
+          user: { select: { firstName: true, lastName: true, email: true } },
+        },
+        orderBy: { createdAt: "desc" },
+        skip,
+        take: limit,
+      }),
+      prisma.booking.count({ where: whereClause }),
+    ]);
+
+    return {
+      items,
+      meta: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
       },
-      orderBy: { createdAt: "desc" },
-    });
+    };
   },
 
   async deleteBookingDraft(bookingId: string, userId: string) {
