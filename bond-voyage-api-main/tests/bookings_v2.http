@@ -1,5 +1,5 @@
 @baseUrl = http://localhost:8087/api/v1
-@userToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiIxZmViM2I4MC1lMTRmLTQzY2EtYTY2MS0xNTcxNTI4MmE4ZjYiLCJlbWFpbCI6InVzZXJAZXhhbXBsZS5jb20iLCJwaG9uZU51bWJlciI6IisxMjM0NTY3ODkxIiwicm9sZSI6IlVTRVIiLCJpYXQiOjE3NjU4MTkwOTksImV4cCI6MTc2NTgxOTkzOX0.LRZiuSAGfuNBiL-0LqbUfs2QI1gcsAjv7DcLc61Lp4I
+@userToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJmYTY3NDg0YS0yNWVkLTQxNDEtOWQ3YS03ODRhMTI1ODNlZmUiLCJlbWFpbCI6ImZlbGl4YW5nZWxvbWVsZ2FyNUBnbWFpbC5jb20iLCJwaG9uZU51bWJlciI6IjA5NjEyMTMzNTIwIiwicm9sZSI6IlVTRVIiLCJpYXQiOjE3NjYxNjI3MjAsImV4cCI6MTc2NjE2MzU2MH0.ZWQcfK5KBcSxfhB8SYj_-54a0E1pZ1SbRZp-glNGM2I
 @adminToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJkZmFiNGFhOC04MzA5LTRmNzktYmIxMi0zZGU0ZWYzMDIxOWMiLCJlbWFpbCI6ImFkbWluQGV4YW1wbGUuY29tIiwicGhvbmVOdW1iZXIiOiIrMTIzNDU2Nzg5MCIsInJvbGUiOiJBRE1JTiIsImlhdCI6MTc2NTgxOTQ3NywiZXhwIjoxNzY1ODIwMzE3fQ.-VprfvAlxE9t9gLUv5R4HUiAeglW7sPJVQHxBgWpzZc
 
 # USER LOGIN
@@ -7,8 +7,8 @@ POST {{baseUrl}}/auth/login
 Content-Type: application/json
 
 {
-  "email": "admin@example.com",
-  "password": "Admin@123"
+  "email": "felixangelomelgar5@gmail.com",
+  "password": "User@123"
 }
 
 ###
@@ -53,14 +53,14 @@ Authorization: Bearer {{userToken}}
 
 # 3️⃣ Get Booking Detail
 
-GET {{baseUrl}}/bookings/469af005-dde3-402c-aac2-f154280e67a9
+GET {{baseUrl}}/bookings/f2a0cf9b-9858-4a6e-bb19-3f2a252b08f9
 Authorization: Bearer {{userToken}}
 
 ###
 
 # 4️⃣ Update Booking Itinerary (PUT)
 
-PUT {{baseUrl}}/bookings/469af005-dde3-402c-aac2-f154280e67a9
+PUT {{baseUrl}}/bookings/f2a0cf9b-9858-4a6e-bb19-3f2a252b08f9
 Authorization: Bearer {{userToken}}
 Content-Type: application/json
 
@@ -88,7 +88,7 @@ Content-Type: application/json
 
 # 5️⃣ Submit Booking (DRAFT → PENDING)
 
-PATCH {{baseUrl}}/bookings/469af005-dde3-402c-aac2-f154280e67a9/submit
+PATCH {{baseUrl}}/bookings/f2a0cf9b-9858-4a6e-bb19-3f2a252b08f9/submit
 Authorization: Bearer {{userToken}}
 
 ###

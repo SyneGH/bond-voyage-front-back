@@ -7,7 +7,7 @@ generator client {
 datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  //directUrl = env("DIRECT_URL")
 }
 
 // =========================================
@@ -108,6 +108,7 @@ model User {
   inquiries     Inquiry[]
   messages      Message[]
   notifications Notification[]
+  paymentSubmissions Payment[] @relation("payment_submissions")
   
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
@@ -212,7 +213,7 @@ model Payment {
   bookingId     String
   booking       Booking       @relation(fields: [bookingId], references: [id])
   submittedById String?
-  submittedBy   User?         @relation(fields: [submittedById], references: [id])
+  submittedBy   User?         @relation("payment_submissions", fields: [submittedById], references: [id])
   
   amount        Decimal       @db.Decimal(10, 2)
   method        PaymentMethod @default(GCASH)
