@@ -1,16 +1,18 @@
-import { DECIMAL_RADIX, HTTP_STATUS } from "@/constants/constants";
+import { HTTP_STATUS } from "@/constants/constants";
 import userService from "@/services/user.service";
-import {
-  ApiResponse,
-  AuthenticatedRequest,
-  UserUpdateDto,
-  ChangePasswordDto,
-} from "@/types/index";
-import { throwError } from "@/utils/error";
-import { createResponse } from "@/utils/response";
+import { AuthenticatedRequest } from "@/types/index";
+import { AppError, createResponse, throwError } from "@/utils/responseHandler";
 import { Response } from "express";
 import { redis } from "@/config/redis";
 import { Prisma } from "@prisma/client";
+import { ZodError } from "zod";
+import { registerDto } from "@/validators/auth.dto";
+import {
+  changePasswordDto,
+  updateProfileDto,
+  userIdParamDto,
+  userListQueryDto,
+} from "@/validators/user.dto";
 
 class UserController {
   // Cache TTL constants (in seconds)
@@ -33,7 +35,6 @@ class UserController {
   // Cache invalidation helpers
   private invalidateUserCaches = async (userId: string) => {
     try {
-      // Invalidate user list caches (pattern matching)
       const listKeys = await redis.keys("users:list:*");
       const countKeys = await redis.keys("users:count:*");
 
@@ -46,15 +47,20 @@ class UserController {
     }
   };
 
-  public addUser = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  public addUser = async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<void> => {
     try {
-      const { email, employeeId, phoneNumber } = req.body;
+      const payload = registerDto.parse(req.body);
 
       const [existingEmailUser, existingEmployeeUser, existingPhoneUser] =
         await Promise.all([
-          userService.findByEmail(email),
-          userService.findByEmployeeId(employeeId),
-          userService.findByPhoneNumber(phoneNumber),
+          userService.findByEmail(payload.email),
+          payload.employeeId
+            ? userService.findByEmployeeId(payload.employeeId)
+            : Promise.resolve(null),
+          userService.findByPhoneNumber(payload.phoneNumber),
         ]);
 
       if (existingEmailUser || existingEmployeeUser || existingPhoneUser) {
@@ -68,31 +74,28 @@ class UserController {
           message = "User with this phone number already exists";
         }
 
-        const response: ApiResponse = createResponse(false, message);
-        res.status(HTTP_STATUS.CONFLICT).json(response);
-        return;
+        throwError(HTTP_STATUS.CONFLICT, message);
       }
-  
-      const user = await userService.create(req.body);
 
-      const data = {user}
+      const user = await userService.create(payload);
 
-      const response: ApiResponse = createResponse(
-        true,
-        "User registered successfully",
-        data
-      );
-
-      res.status(HTTP_STATUS.CREATED).json(response);
+      createResponse(res, HTTP_STATUS.CREATED, "User registered successfully", {
+        user: userService.transformUser(user),
+      });
     } catch (error) {
+      if (error instanceof ZodError) {
+        throwError(HTTP_STATUS.BAD_REQUEST, "Validation failed", error.errors);
+      }
+      if (error instanceof AppError) {
+        throw error;
+      }
       throwError(
-        "Failed to create user",
-        error,
         HTTP_STATUS.INTERNAL_SERVER_ERROR,
-        res
+        "Failed to create user",
+        error
       );
-    } 
-  }
+    }
+  };
 
   // Get all users (admin only)
   public getAllUsers = async (
@@ -100,21 +103,15 @@ class UserController {
     res: Response
   ): Promise<void> => {
     try {
-      const { page = 1, limit = 10, search, role } = req.query;
-      const pageNum = parseInt(page as string, DECIMAL_RADIX);
-      const limitNum = parseInt(limit as string, DECIMAL_RADIX);
+      const { page, limit, search, role } = userListQueryDto.parse(req.query);
 
-      // Generate cache keys
       const listCacheKey = this.generateCacheKey.userList(
-        pageNum,
-        limitNum,
-        search as string,
-        role as string
+        page,
+        limit,
+        search,
+        role
       );
-      const countCacheKey = this.generateCacheKey.userCount(
-        search as string,
-        role as string
-      );
+      const countCacheKey = this.generateCacheKey.userCount(search, role);
 
       const [cachedUsers, cachedCount] = await Promise.all([
         redis.get(listCacheKey),
@@ -123,25 +120,22 @@ class UserController {
 
       if (cachedUsers && cachedCount) {
         const users = JSON.parse(cachedUsers);
-        const total = parseInt(cachedCount, DECIMAL_RADIX);
+        const total = parseInt(cachedCount, 10);
 
-        const data = {
-          users,
-          pagination: {
-            page: pageNum,
-            limit: limitNum,
-            total,
-            pages: Math.ceil(total / limitNum),
-          },
+        const meta = {
+          page,
+          limit,
+          total,
+          pages: Math.ceil(total / limit),
         };
 
-        const response: ApiResponse = createResponse(
-          true,
+        createResponse(
+          res,
+          HTTP_STATUS.OK,
           "Users retrieved successfully (cached)",
-          data
+          { users },
+          meta
         );
-
-        res.status(HTTP_STATUS.OK).json(response);
         return;
       }
 
@@ -149,33 +143,31 @@ class UserController {
 
       if (search) {
         whereClause.OR = [
-          { firstName: { contains: search as string, mode: "insensitive" } },
-          { lastName: { contains: search as string, mode: "insensitive" } },
-          { email: { contains: search as string, mode: "insensitive" } },
-          { employeeId: { contains: search as string, mode: "insensitive" } },
+          { firstName: { contains: search, mode: "insensitive" } },
+          { lastName: { contains: search, mode: "insensitive" } },
+          { email: { contains: search, mode: "insensitive" } },
+          { employeeId: { contains: search, mode: "insensitive" } },
         ];
       }
 
-      if (role && ["USER", "ADMIN"].includes(role as string)) {
+      if (role) {
         whereClause.role = role as "USER" | "ADMIN";
       }
 
       const [users, total] = await Promise.all([
         userService.findMany({
-          skip: (pageNum - 1) * limitNum,
-          take: limitNum,
+          skip: (page - 1) * limit,
+          take: limit,
           where: whereClause,
           orderBy: { createdAt: "desc" },
         }),
         userService.count(whereClause),
       ]);
 
-      // Transform users to exclude sensitive data
       const transformedUsers = users.map((user) =>
         userService.transformUser(user)
       );
 
-      // Cache the results
       await Promise.all([
         redis.setex(
           listCacheKey,
@@ -185,29 +177,31 @@ class UserController {
         redis.setex(countCacheKey, this.CACHE_TTL.USER_LIST, total.toString()),
       ]);
 
-      const data = {
-        users: transformedUsers,
-        pagination: {
-          page: pageNum,
-          limit: limitNum,
-          total,
-          pages: Math.ceil(total / limitNum),
-        },
+      const meta = {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit),
       };
 
-      const response: ApiResponse = createResponse(
-        true,
+      createResponse(
+        res,
+        HTTP_STATUS.OK,
         "Users retrieved successfully",
-        data
+        { users: transformedUsers },
+        meta
       );
-
-      res.status(HTTP_STATUS.OK).json(response);
     } catch (error) {
+      if (error instanceof ZodError) {
+        throwError(HTTP_STATUS.BAD_REQUEST, "Validation failed", error.errors);
+      }
+      if (error instanceof AppError) {
+        throw error;
+      }
       throwError(
-        "Failed to retrieve users",
-        error,
         HTTP_STATUS.INTERNAL_SERVER_ERROR,
-        res
+        "Failed to retrieve users",
+        error
       );
     }
   };
@@ -217,28 +211,21 @@ class UserController {
     res: Response
   ): Promise<void> => {
     try {
-      const userId = req.params.id;
+      const { id: userId } = userIdParamDto.parse(req.params);
 
       const cacheKey = this.generateCacheKey.singleUser(userId);
       const cachedUser = await redis.get(cacheKey);
 
       if (cachedUser) {
         const user = JSON.parse(cachedUser);
-        const data = { user };
-        const response: ApiResponse = createResponse(
-          true,
-          "User found (cached)",
-          data
-        );
-        res.status(HTTP_STATUS.OK).json(response);
+        createResponse(res, HTTP_STATUS.OK, "User found (cached)", { user });
         return;
       }
 
       const user = await userService.findById(userId);
 
       if (!user) {
-        throwError("User not found", undefined, HTTP_STATUS.NOT_FOUND, res);
-        return;
+        throwError(HTTP_STATUS.NOT_FOUND, "User not found");
       }
 
       const transformedUser = userService.transformUser(user);
@@ -249,15 +236,17 @@ class UserController {
         JSON.stringify(transformedUser)
       );
 
-      const data = {
+      createResponse(res, HTTP_STATUS.OK, "User found", {
         user: transformedUser,
-      };
-
-      const response: ApiResponse = createResponse(true, "User found", data);
-
-      res.status(HTTP_STATUS.OK).json(response);
+      });
     } catch (error) {
-      throwError("User not found", error, HTTP_STATUS.NOT_FOUND, res);
+      if (error instanceof ZodError) {
+        throwError(HTTP_STATUS.BAD_REQUEST, "Validation failed", error.errors);
+      }
+      if (error instanceof AppError) {
+        throw error;
+      }
+      throwError(HTTP_STATUS.NOT_FOUND, "User not found", error);
     }
   };
 
@@ -270,42 +259,29 @@ class UserController {
       const userId = req.user?.userId;
 
       if (!userId) {
-        throwError(
-          "User id is required",
-          undefined,
-          HTTP_STATUS.BAD_REQUEST,
-          res
-        );
-        return;
+        throwError(HTTP_STATUS.BAD_REQUEST, "User id is required");
       }
 
-      const updateData: UserUpdateDto = req.body;
+      const updateData = updateProfileDto.parse(req.body);
       const user = await userService.updateProfile(userId, updateData);
 
       if (!user) {
-        throwError("User not found", undefined, HTTP_STATUS.BAD_REQUEST, res);
-        return;
+        throwError(HTTP_STATUS.BAD_REQUEST, "User not found");
       }
 
-      // Invalidate caches after update
       await this.invalidateUserCaches(userId);
 
-      const data = { user: userService.transformUser(user) };
-
-      const response: ApiResponse = {
-        success: true,
-        message: "Profile updated successfully",
-        data,
-      };
-
-      res.status(HTTP_STATUS.OK).json(response);
+      createResponse(res, HTTP_STATUS.OK, "Profile updated successfully", {
+        user: userService.transformUser(user),
+      });
     } catch (error) {
-      throwError(
-        "Failed to update profile",
-        error,
-        HTTP_STATUS.BAD_REQUEST,
-        res
-      );
+      if (error instanceof ZodError) {
+        throwError(HTTP_STATUS.BAD_REQUEST, "Validation failed", error.errors);
+      }
+      if (error instanceof AppError) {
+        throw error;
+      }
+      throwError(HTTP_STATUS.BAD_REQUEST, "Failed to update profile", error);
     }
   };
 
@@ -315,30 +291,24 @@ class UserController {
     res: Response
   ): Promise<void> => {
     try {
-      const userId = req.params.id;
+      const { id: userId } = userIdParamDto.parse(req.params);
       const user = await userService.deactivate(userId);
 
       if (!user) {
-        throwError("User not found", undefined, HTTP_STATUS.NOT_FOUND, res);
-        return;
+        throwError(HTTP_STATUS.NOT_FOUND, "User not found");
       }
 
-      // Invalidate caches after deactivation
       await this.invalidateUserCaches(userId);
 
-      const response: ApiResponse = {
-        success: true,
-        message: "User deactivated successfully",
-      };
-
-      res.status(HTTP_STATUS.OK).json(response);
+      createResponse(res, HTTP_STATUS.OK, "User deactivated successfully");
     } catch (error) {
-      throwError(
-        "Failed to deactivate user",
-        error,
-        HTTP_STATUS.BAD_REQUEST,
-        res
-      );
+      if (error instanceof ZodError) {
+        throwError(HTTP_STATUS.BAD_REQUEST, "Validation failed", error.errors);
+      }
+      if (error instanceof AppError) {
+        throw error;
+      }
+      throwError(HTTP_STATUS.BAD_REQUEST, "Failed to deactivate user", error);
     }
   };
 
@@ -348,25 +318,24 @@ class UserController {
     res: Response
   ): Promise<void> => {
     try {
-      const userId = req.params.id;
+      const { id: userId } = userIdParamDto.parse(req.params);
       const user = await userService.delete(userId);
 
       if (!user) {
-        throwError("User not found", undefined, HTTP_STATUS.NOT_FOUND, res);
-        return;
+        throwError(HTTP_STATUS.NOT_FOUND, "User not found");
       }
 
-      // Invalidate caches after deletion
       await this.invalidateUserCaches(userId);
 
-      const response: ApiResponse = {
-        success: true,
-        message: "User deleted successfully",
-      };
-
-      res.status(HTTP_STATUS.OK).json(response);
+      createResponse(res, HTTP_STATUS.OK, "User deleted successfully");
     } catch (error) {
-      throwError("Failed to delete user", error, HTTP_STATUS.BAD_REQUEST, res);
+      if (error instanceof ZodError) {
+        throwError(HTTP_STATUS.BAD_REQUEST, "Validation failed", error.errors);
+      }
+      if (error instanceof AppError) {
+        throw error;
+      }
+      throwError(HTTP_STATUS.BAD_REQUEST, "Failed to delete user", error);
     }
   };
 
@@ -377,51 +346,43 @@ class UserController {
   ): Promise<void> => {
     try {
       const userId = req.user?.userId;
-      const user = await userService.findByIdWithPassword(userId!);
-
-      if (!user) {
-        throwError("User not found", undefined, HTTP_STATUS.NOT_FOUND, res);
-        return;
+      if (!userId) {
+        throwError(HTTP_STATUS.BAD_REQUEST, "User id is required");
       }
 
-      const { oldPassword, newPassword }: ChangePasswordDto = req.body;
+      const payload = changePasswordDto.parse(req.body);
+      const user = await userService.findByIdWithPassword(userId);
+
+      if (!user) {
+        throwError(HTTP_STATUS.NOT_FOUND, "User not found");
+      }
 
       const isPasswordMatched = await userService.comparePassword(
-        oldPassword,
+        payload.oldPassword,
         user.password
       );
 
       if (!isPasswordMatched) {
-        throwError(
-          "Old password does not match",
-          undefined,
-          HTTP_STATUS.BAD_REQUEST,
-          res
-        );
-        return;
+        throwError(HTTP_STATUS.BAD_REQUEST, "Old password does not match");
       }
 
-      const hashedNewPassword = await userService.hashPassword(newPassword);
-
-      await userService.updateById(userId!, { password: hashedNewPassword });
-
-      // Only invalidate the specific user's cache (password change doesn't affect lists)
-      await redis.del(this.generateCacheKey.singleUser(userId!));
-
-      const response: ApiResponse = {
-        success: true,
-        message: "Password updated successfully",
-      };
-
-      res.status(HTTP_STATUS.OK).json(response);
-    } catch (error) {
-      console.log(error);
-      throwError(
-        "Failed to change password",
-        error instanceof Error ? error.message : "Unknown error",
-        HTTP_STATUS.BAD_REQUEST,
-        res
+      const hashedNewPassword = await userService.hashPassword(
+        payload.newPassword
       );
+
+      await userService.updateById(userId, { password: hashedNewPassword });
+
+      await redis.del(this.generateCacheKey.singleUser(userId));
+
+      createResponse(res, HTTP_STATUS.OK, "Password updated successfully");
+    } catch (error) {
+      if (error instanceof ZodError) {
+        throwError(HTTP_STATUS.BAD_REQUEST, "Validation failed", error.errors);
+      }
+      if (error instanceof AppError) {
+        throw error;
+      }
+      throwError(HTTP_STATUS.BAD_REQUEST, "Failed to change password", error);
     }
   };
 }

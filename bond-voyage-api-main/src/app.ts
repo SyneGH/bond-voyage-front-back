@@ -5,8 +5,8 @@ import morgan from "morgan";
 import cookieParser from "cookie-parser";
 import routes from "@/routes";
 import { HTTP_STATUS } from "@/constants/constants";
-import { createResponse } from "@/utils/response";
-import authRoutes from '@/routes/auth.route';
+import { createResponse } from "@/utils/responseHandler";
+import { errorMiddleware } from "@/middlewares/error.middleware";
 
 const app = express();
 
@@ -36,7 +36,6 @@ app.use(cookieParser());
 
 // API routes
 app.use("/api/v1", routes);
-app.use("/api/v1/auth", authRoutes);
 
 // Root route
 app.get("/", (req, res) => {
@@ -54,30 +53,10 @@ app.get("/", (req, res) => {
 
 // 404 handler
 app.use("*", (req, res) => {
-  const response = createResponse(false, `Route ${req.originalUrl} not found`);
-  res.status(HTTP_STATUS.NOT_FOUND).json(response);
+  createResponse(res, HTTP_STATUS.NOT_FOUND, `Route ${req.originalUrl} not found`);
 });
 
 // Global error handler
-app.use(
-  (
-    error: any,
-    req: express.Request,
-    res: express.Response,
-    next: express.NextFunction
-  ) => {
-    console.error("Global error handler:", error);
-
-    const response = createResponse(
-      false,
-      error.message || "Internal server error",
-      process.env.NODE_ENV === "development" ? error.stack : undefined
-    );
-
-    res
-      .status(error.statusCode || HTTP_STATUS.INTERNAL_SERVER_ERROR)
-      .json(response);
-  }
-);
+app.use(errorMiddleware);
 
 export default app;

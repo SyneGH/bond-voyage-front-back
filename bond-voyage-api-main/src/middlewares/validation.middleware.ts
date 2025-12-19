@@ -1,8 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import { ObjectSchema } from "joi";
-import { ApiResponse } from "@/types";
 import { HTTP_STATUS } from "@/constants/constants";
-import { createResponse } from "@/utils/response";
+import { createResponse } from "@/utils/responseHandler";
 
 export const validate = (schema: ObjectSchema) => {
   return (req: Request, res: Response, next: NextFunction): void => {
@@ -27,13 +26,7 @@ export const validate = (schema: ObjectSchema) => {
         ? errors[0].message 
         : 'Multiple validation errors';
 
-      const response: ApiResponse = createResponse(
-        false,
-        errorMessage,
-        { errors }
-      );
-
-      res.status(HTTP_STATUS.BAD_REQUEST).json(response);
+      createResponse(res, HTTP_STATUS.BAD_REQUEST, errorMessage, { errors });
       return;
     }
 

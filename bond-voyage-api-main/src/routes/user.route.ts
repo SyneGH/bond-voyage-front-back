@@ -1,12 +1,8 @@
 import { Router } from "express";
 import userController from "@/controllers/user.controller";
 import { authenticate, authorize } from "@/middlewares/auth.middleware";
-import { validate } from "@/middlewares/validation.middleware";
-import {
-  updateProfileSchema,
-  changePasswordSchema,
-} from "@/validations/auth.validation";
 import { Role } from "@/constants/constants";
+import { asyncHandler } from "@/middlewares/async.middleware";
 
 const router = Router();
 
@@ -14,26 +10,22 @@ const router = Router();
 router.use(authenticate);
 
 // User profile routes
-router.put(
-  "/profile",
-  validate(updateProfileSchema),
-  userController.updateProfile
-);
-router.put(
-  "/change-password",
-  validate(changePasswordSchema),
-  userController.changePassword
-);
+router.put("/profile", asyncHandler(userController.updateProfile));
+router.put("/change-password", asyncHandler(userController.changePassword));
 
 // Admin only routes
-router.post("/", authorize([Role.ADMIN]), userController.addUser);
-router.get("/", authorize([Role.ADMIN]), userController.getAllUsers);
-router.get("/:id", authorize([Role.ADMIN]), userController.getUserById);
+router.post("/", authorize([Role.ADMIN]), asyncHandler(userController.addUser));
+router.get("/", authorize([Role.ADMIN]), asyncHandler(userController.getAllUsers));
+router.get("/:id", authorize([Role.ADMIN]), asyncHandler(userController.getUserById));
 router.patch(
   "/:id/deactivate",
   authorize([Role.ADMIN]),
-  userController.deactivateUser
+  asyncHandler(userController.deactivateUser)
 );
-router.delete("/:id", authorize([Role.ADMIN]), userController.deleteUser);
+router.delete(
+  "/:id",
+  authorize([Role.ADMIN]),
+  asyncHandler(userController.deleteUser)
+);
 
 export default router;

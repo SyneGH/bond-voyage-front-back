@@ -47,6 +47,13 @@ export class UserService {
       password: hashedPassword,
     };
 
+    if (data.role) {
+      userData.role = data.role;
+      if (data.role === "ADMIN" && data.companyName) {
+        userData.companyName = data.companyName;
+      }
+    }
+
     // Add birthday if provided - handle string conversion
     if (data.birthday) {
       const birthdayString = String(data.birthday).trim();

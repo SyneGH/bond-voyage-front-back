@@ -2,104 +2,157 @@ import { Response } from "express";
 import { AuthenticatedRequest } from "@/types";
 import { BookingService } from "@/services/booking.service";
 import {
-  createBookingSchema,
-  updateItinerarySchema,
-  updateStatusSchema,
-} from "@/validations/booking.validation";
+  bookingIdParamDto,
+  bookingListQueryDto,
+  createBookingDto,
+  updateItineraryDto,
+  updateStatusDto,
+} from "@/validators/booking.dto";
 import { BookingStatus } from "@prisma/client";
+import { AppError, createResponse, throwError } from "@/utils/responseHandler";
+import { HTTP_STATUS } from "@/constants/constants";
+import { ZodError } from "zod";
 
 export const BookingController = {
   // POST /api/bookings
-  create: async (req: AuthenticatedRequest, res: Response) => {
-    const { error, value } = createBookingSchema.validate(req.body);
-    if (error) return res.status(400).json({ success: false, message: error.message });
-
-    if (!req.user?.userId) {
-      return res.status(401).json({ success: false, message: "Unauthorized" });
-    }
-
+  create: async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
+      const payload = createBookingDto.parse(req.body);
+
+      if (!req.user?.userId) {
+        throwError(HTTP_STATUS.UNAUTHORIZED, "Unauthorized");
+      }
+
       const booking = await BookingService.createBooking({
-        ...value,
+        ...payload,
         userId: req.user.userId,
       });
 
-      return res.status(201).json({ success: true, data: booking });
-    } catch (err) {
-      console.error(err);
-      return res.status(500).json({ success: false, message: "Internal Server Error" });
+      createResponse(res, HTTP_STATUS.CREATED, "Booking created", booking);
+    } catch (error) {
+      if (error instanceof ZodError) {
+        throwError(HTTP_STATUS.BAD_REQUEST, "Validation failed", error.errors);
+      }
+      if (error instanceof AppError) {
+        throw error;
+      }
+      throwError(
+        HTTP_STATUS.INTERNAL_SERVER_ERROR,
+        "Internal Server Error",
+        error
+      );
     }
   },
 
   // GET /api/bookings/:id
-  getOne: async (req: AuthenticatedRequest, res: Response) => {
+  getOne: async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
-      const booking = await BookingService.getBookingById(req.params.id);
-      if (!booking) return res.status(404).json({ success: false, message: "Booking not found" });
-
-      // Optional: if user is not admin, enforce ownership
-      if (req.user?.role !== "ADMIN" && booking.userId !== req.user?.userId) {
-        return res.status(403).json({ success: false, message: "Forbidden" });
+      const { id } = bookingIdParamDto.parse(req.params);
+      const booking = await BookingService.getBookingById(id);
+      if (!booking) {
+        throwError(HTTP_STATUS.NOT_FOUND, "Booking not found");
       }
 
-      return res.status(200).json({ success: true, data: booking });
-    } catch (err) {
-      return res.status(500).json({ success: false, message: "Internal Server Error" });
+      if (req.user?.role !== "ADMIN" && booking.userId !== req.user?.userId) {
+        throwError(HTTP_STATUS.FORBIDDEN, "Forbidden");
+      }
+
+      createResponse(res, HTTP_STATUS.OK, "Booking retrieved", booking);
+    } catch (error) {
+      if (error instanceof ZodError) {
+        throwError(HTTP_STATUS.BAD_REQUEST, "Validation failed", error.errors);
+      }
+      if (error instanceof AppError) {
+        throw error;
+      }
+      throwError(
+        HTTP_STATUS.INTERNAL_SERVER_ERROR,
+        "Internal Server Error",
+        error
+      );
     }
   },
 
   // PUT /api/bookings/:id
-  updateItinerary: async (req: AuthenticatedRequest, res: Response) => {
-    const { error, value } = updateItinerarySchema.validate(req.body);
-    if (error) return res.status(400).json({ success: false, message: error.message });
-
-    if (!req.user?.userId) {
-      return res.status(401).json({ success: false, message: "Unauthorized" });
-    }
-
+  updateItinerary: async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<void> => {
     try {
-      await BookingService.updateItinerary(req.params.id, req.user.userId, value);
+      const { id } = bookingIdParamDto.parse(req.params);
+      const payload = updateItineraryDto.parse(req.body);
 
-      const updated = await BookingService.getBookingById(req.params.id);
-      return res.status(200).json({ success: true, data: updated });
-    } catch (err: any) {
-      if (err.message === "BOOKING_NOT_EDITABLE") {
-        return res.status(409).json({ success: false, message: "Booking cannot be modified" });
+      if (!req.user?.userId) {
+        throwError(HTTP_STATUS.UNAUTHORIZED, "Unauthorized");
       }
-      if (err.message === "BOOKING_NOT_FOUND") {
-        return res.status(404).json({ success: false, message: "Booking not found" });
+
+      await BookingService.updateItinerary(id, req.user.userId, payload);
+
+      const updated = await BookingService.getBookingById(id);
+      createResponse(res, HTTP_STATUS.OK, "Booking updated", updated);
+    } catch (error: any) {
+      if (error instanceof ZodError) {
+        throwError(HTTP_STATUS.BAD_REQUEST, "Validation failed", error.errors);
       }
-      return res.status(500).json({ success: false, message: "Internal Server Error" });
+      if (error instanceof AppError) {
+        throw error;
+      }
+      if (error?.message === "BOOKING_NOT_EDITABLE") {
+        throwError(HTTP_STATUS.CONFLICT, "Booking cannot be modified");
+      }
+      if (error?.message === "BOOKING_NOT_FOUND") {
+        throwError(HTTP_STATUS.NOT_FOUND, "Booking not found");
+      }
+      throwError(
+        HTTP_STATUS.INTERNAL_SERVER_ERROR,
+        "Internal Server Error",
+        error
+      );
     }
   },
 
   // PATCH /api/bookings/:id/status (Admin)
-  updateStatus: async (req: AuthenticatedRequest, res: Response) => {
-    const { error, value } = updateStatusSchema.validate(req.body);
-    if (error) return res.status(400).json({ success: false, message: error.message });
-
+  updateStatus: async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<void> => {
     try {
+      const { id } = bookingIdParamDto.parse(req.params);
+      const payload = updateStatusDto.parse(req.body);
+
       const updated = await BookingService.updateStatus(
-        req.params.id,
-        value.status,
-        value.rejectionReason,
-        value.rejectionResolution
+        id,
+        payload.status as BookingStatus,
+        payload.rejectionReason,
+        payload.rejectionResolution
       );
-      return res.status(200).json({ success: true, data: updated });
-    } catch (err) {
-      return res.status(500).json({ success: false, message: "Internal Server Error" });
+      createResponse(res, HTTP_STATUS.OK, "Booking status updated", updated);
+    } catch (error) {
+      if (error instanceof ZodError) {
+        throwError(HTTP_STATUS.BAD_REQUEST, "Validation failed", error.errors);
+      }
+      if (error instanceof AppError) {
+        throw error;
+      }
+      throwError(
+        HTTP_STATUS.INTERNAL_SERVER_ERROR,
+        "Internal Server Error",
+        error
+      );
     }
   },
 
   // GET /api/bookings/my-bookings?page=1&limit=10
-  getMyBookings: async (req: AuthenticatedRequest, res: Response) => {
+  getMyBookings: async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<void> => {
     try {
       if (!req.user?.userId) {
-        return res.status(401).json({ success: false, message: "Unauthorized" });
+        throwError(HTTP_STATUS.UNAUTHORIZED, "Unauthorized");
       }
 
-      const page = Number(req.query.page || 1);
-      const limit = Number(req.query.limit || 10);
+      const { page, limit } = bookingListQueryDto.parse(req.query);
 
       const result = await BookingService.getUserBookingsPaginated(
         req.user.userId,
@@ -107,80 +160,143 @@ export const BookingController = {
         limit
       );
 
-      return res.status(200).json({
-        success: true,
-        data: result,
-      });
+      createResponse(res, HTTP_STATUS.OK, "Bookings retrieved", result.items, result.meta);
     } catch (error) {
-      return res.status(500).json({
-        success: false,
-        message: "Internal Server Error",
-      });
+      if (error instanceof ZodError) {
+        throwError(HTTP_STATUS.BAD_REQUEST, "Validation failed", error.errors);
+      }
+      if (error instanceof AppError) {
+        throw error;
+      }
+      throwError(
+        HTTP_STATUS.INTERNAL_SERVER_ERROR,
+        "Internal Server Error",
+        error
+      );
     }
   },
 
   // GET /api/bookings/admin/bookings?status=PENDING
-  getAllBookings: async (req: AuthenticatedRequest, res: Response) => {
+  getAllBookings: async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<void> => {
     try {
-      const status = req.query.status as BookingStatus | undefined;
-      const bookings = await BookingService.getAllBookings(status);
-      return res.status(200).json({ success: true, data: bookings });
-    } catch {
-      return res.status(500).json({ success: false, message: "Internal Server Error" });
+      const { page, limit, status } = bookingListQueryDto.parse(req.query);
+      const result = await BookingService.getAllBookingsPaginated(
+        status as BookingStatus | undefined,
+        page,
+        limit
+      );
+      createResponse(res, HTTP_STATUS.OK, "Bookings retrieved", result.items, result.meta);
+    } catch (error) {
+      if (error instanceof ZodError) {
+        throwError(HTTP_STATUS.BAD_REQUEST, "Validation failed", error.errors);
+      }
+      if (error instanceof AppError) {
+        throw error;
+      }
+      throwError(
+        HTTP_STATUS.INTERNAL_SERVER_ERROR,
+        "Internal Server Error",
+        error
+      );
     }
   },
 
   // DELETE /api/bookings/:id (user can delete DRAFT only)
-  deleteDraft: async (req: AuthenticatedRequest, res: Response) => {
+  deleteDraft: async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<void> => {
     try {
-      if (!req.user?.userId) return res.status(401).json({ success: false, message: "Unauthorized" });
+      if (!req.user?.userId) {
+        throwError(HTTP_STATUS.UNAUTHORIZED, "Unauthorized");
+      }
 
-      await BookingService.deleteBookingDraft(req.params.id, req.user.userId);
-      return res.status(200).json({ success: true, message: "Booking deleted" });
-    } catch (err: any) {
-      if (err.message === "CANNOT_DELETE_NON_DRAFT") {
-        return res.status(409).json({ success: false, message: "Only drafts can be deleted" });
+      const { id } = bookingIdParamDto.parse(req.params);
+      await BookingService.deleteBookingDraft(id, req.user.userId);
+      createResponse(res, HTTP_STATUS.OK, "Booking deleted");
+    } catch (error: any) {
+      if (error instanceof ZodError) {
+        throwError(HTTP_STATUS.BAD_REQUEST, "Validation failed", error.errors);
       }
-      if (err.message === "BOOKING_NOT_FOUND") {
-        return res.status(404).json({ success: false, message: "Booking not found" });
+      if (error instanceof AppError) {
+        throw error;
       }
-      return res.status(500).json({ success: false, message: "Internal Server Error" });
+      if (error?.message === "CANNOT_DELETE_NON_DRAFT") {
+        throwError(HTTP_STATUS.CONFLICT, "Only drafts can be deleted");
+      }
+      if (error?.message === "BOOKING_NOT_FOUND") {
+        throwError(HTTP_STATUS.NOT_FOUND, "Booking not found");
+      }
+      throwError(
+        HTTP_STATUS.INTERNAL_SERVER_ERROR,
+        "Internal Server Error",
+        error
+      );
     }
   },
 
   // PATCH /api/bookings/:id/submit  (DRAFT -> PENDING)
-  submit: async (req: AuthenticatedRequest, res: Response) => {
+  submit: async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
-      if (!req.user?.userId) return res.status(401).json({ success: false, message: "Unauthorized" });
+      if (!req.user?.userId) {
+        throwError(HTTP_STATUS.UNAUTHORIZED, "Unauthorized");
+      }
 
-      const updated = await BookingService.submitBooking(req.params.id, req.user.userId);
-      return res.status(200).json({ success: true, data: updated });
-    } catch (err: any) {
-      if (err.message === "CANNOT_SUBMIT") {
-        return res.status(409).json({ success: false, message: "Only drafts can be submitted" });
+      const { id } = bookingIdParamDto.parse(req.params);
+      const updated = await BookingService.submitBooking(id, req.user.userId);
+      createResponse(res, HTTP_STATUS.OK, "Booking submitted", updated);
+    } catch (error: any) {
+      if (error instanceof ZodError) {
+        throwError(HTTP_STATUS.BAD_REQUEST, "Validation failed", error.errors);
       }
-      if (err.message === "BOOKING_NOT_FOUND") {
-        return res.status(404).json({ success: false, message: "Booking not found" });
+      if (error instanceof AppError) {
+        throw error;
       }
-      return res.status(500).json({ success: false, message: "Internal Server Error" });
+      if (error?.message === "CANNOT_SUBMIT") {
+        throwError(HTTP_STATUS.CONFLICT, "Only drafts can be submitted");
+      }
+      if (error?.message === "BOOKING_NOT_FOUND") {
+        throwError(HTTP_STATUS.NOT_FOUND, "Booking not found");
+      }
+      throwError(
+        HTTP_STATUS.INTERNAL_SERVER_ERROR,
+        "Internal Server Error",
+        error
+      );
     }
   },
 
   // PATCH /api/bookings/:id/cancel
-  cancel: async (req: AuthenticatedRequest, res: Response) => {
+  cancel: async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
-      if (!req.user?.userId) return res.status(401).json({ success: false, message: "Unauthorized" });
+      if (!req.user?.userId) {
+        throwError(HTTP_STATUS.UNAUTHORIZED, "Unauthorized");
+      }
 
-      const updated = await BookingService.cancelBooking(req.params.id, req.user.userId);
-      return res.status(200).json({ success: true, data: updated });
-    } catch (err: any) {
-      if (err.message === "CANNOT_CANCEL") {
-        return res.status(409).json({ success: false, message: "Booking cannot be cancelled" });
+      const { id } = bookingIdParamDto.parse(req.params);
+      const updated = await BookingService.cancelBooking(id, req.user.userId);
+      createResponse(res, HTTP_STATUS.OK, "Booking cancelled", updated);
+    } catch (error: any) {
+      if (error instanceof ZodError) {
+        throwError(HTTP_STATUS.BAD_REQUEST, "Validation failed", error.errors);
       }
-      if (err.message === "BOOKING_NOT_FOUND") {
-        return res.status(404).json({ success: false, message: "Booking not found" });
+      if (error instanceof AppError) {
+        throw error;
       }
-      return res.status(500).json({ success: false, message: "Internal Server Error" });
+      if (error?.message === "CANNOT_CANCEL") {
+        throwError(HTTP_STATUS.CONFLICT, "Booking cannot be cancelled");
+      }
+      if (error?.message === "BOOKING_NOT_FOUND") {
+        throwError(HTTP_STATUS.NOT_FOUND, "Booking not found");
+      }
+      throwError(
+        HTTP_STATUS.INTERNAL_SERVER_ERROR,
+        "Internal Server Error",
+        error
+      );
     }
   },
 };
