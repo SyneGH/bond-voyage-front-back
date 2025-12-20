@@ -1,5 +1,4 @@
 import { prisma } from "@/config/database";
-import { logActivity } from "./activity-log.service";
 import { Prisma } from "@prisma/client";
 
 interface TourPackageActivityInput {
@@ -32,8 +31,8 @@ interface CreateTourPackageInput {
 interface UpdateTourPackageInput extends Partial<CreateTourPackageInput> {}
 
 export const TourPackageService = {
-  async create(data: CreateTourPackageInput, actorId?: string) {
-    const tourPackage = await prisma.tourPackage.create({
+  async create(data: CreateTourPackageInput) {
+    return prisma.tourPackage.create({
       data: {
         title: data.title,
         destination: data.destination,
@@ -71,17 +70,6 @@ export const TourPackageService = {
         },
       },
     });
-
-    if (actorId) {
-      await logActivity(
-        prisma,
-        actorId,
-        "Created Standard Itinerary",
-        `Created tour package ${tourPackage.title} (${tourPackage.destination})`
-      );
-    }
-
-    return tourPackage;
   },
 
   async list(params: {
@@ -146,13 +134,13 @@ export const TourPackageService = {
     });
   },
 
-  async update(id: string, data: UpdateTourPackageInput, actorId?: string) {
+  async update(id: string, data: UpdateTourPackageInput) {
     return prisma.$transaction(async (tx) => {
       if (data.days) {
         await tx.tourPackageDay.deleteMany({ where: { tourPackageId: id } });
       }
 
-      const updated = await tx.tourPackage.update({
+      return tx.tourPackage.update({
         where: { id },
         data: {
           title: data.title,
@@ -191,32 +179,10 @@ export const TourPackageService = {
           },
         },
       });
-
-      if (actorId) {
-        await logActivity(
-          tx,
-          actorId,
-          "Updated Standard Itinerary",
-          `Updated tour package ${id}`
-        );
-      }
-
-      return updated;
     });
   },
 
-  async remove(id: string, actorId?: string) {
-    const removed = await prisma.tourPackage.delete({ where: { id } });
-
-    if (actorId) {
-      await logActivity(
-        prisma,
-        actorId,
-        "Deleted Standard Itinerary",
-        `Deleted tour package ${id}`
-      );
-    }
-
-    return removed;
+  async remove(id: string) {
+    return prisma.tourPackage.delete({ where: { id } });
   },
 };

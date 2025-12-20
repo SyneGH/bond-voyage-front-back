@@ -77,11 +77,7 @@ export const PaymentController = {
       const { id } = paymentIdParamDto.parse(req.params);
       const payload = updatePaymentStatusDto.parse(req.body);
 
-      const payment = await PaymentService.updatePaymentStatus(
-        id,
-        payload.status,
-        req.user?.userId
-      );
+      const payment = await PaymentService.updatePaymentStatus(id, payload.status);
       createResponse(res, HTTP_STATUS.OK, "Payment status updated", payment);
     } catch (error) {
       if (error instanceof ZodError) {

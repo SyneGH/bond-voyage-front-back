@@ -7,7 +7,7 @@ generator client {
 datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  //directUrl = env("DIRECT_URL")
 }
 
 // =========================================
@@ -222,7 +222,7 @@ model Payment {
   
   proofImage    Bytes?
   proofMimeType String?
-  proofSize     Int?
+  proofSize     Int?       
   transactionId String?       
   
   createdAt     DateTime      @default(now())

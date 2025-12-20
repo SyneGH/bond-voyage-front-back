@@ -62,13 +62,10 @@ export const TourPackageController = {
     }
   },
 
-  create: async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  create: async (req: Request, res: Response): Promise<void> => {
     try {
       const payload = createTourPackageDto.parse(req.body);
-      const tourPackage = await TourPackageService.create(
-        payload,
-        req.user?.userId
-      );
+      const tourPackage = await TourPackageService.create(payload);
       createResponse(res, HTTP_STATUS.CREATED, "Tour package created", tourPackage);
     } catch (error) {
       if (error instanceof ZodError) {
@@ -85,15 +82,11 @@ export const TourPackageController = {
     }
   },
 
-  update: async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  update: async (req: Request, res: Response): Promise<void> => {
     try {
       const { id } = tourPackageIdParamDto.parse(req.params);
       const payload = updateTourPackageDto.parse(req.body);
-      const tourPackage = await TourPackageService.update(
-        id,
-        payload,
-        req.user?.userId
-      );
+      const tourPackage = await TourPackageService.update(id, payload);
       createResponse(res, HTTP_STATUS.OK, "Tour package updated", tourPackage);
     } catch (error) {
       if (error instanceof ZodError) {
@@ -110,10 +103,10 @@ export const TourPackageController = {
     }
   },
 
-  remove: async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  remove: async (req: Request, res: Response): Promise<void> => {
     try {
       const { id } = tourPackageIdParamDto.parse(req.params);
-      await TourPackageService.remove(id, req.user?.userId);
+      await TourPackageService.remove(id);
       createResponse(res, HTTP_STATUS.OK, "Tour package deleted");
     } catch (error) {
       if (error instanceof ZodError) {

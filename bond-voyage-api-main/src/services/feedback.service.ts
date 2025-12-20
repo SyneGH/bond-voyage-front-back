@@ -1,30 +1,16 @@
 import { prisma } from "@/config/database";
-import { logActivity } from "./activity-log.service";
 
 export const FeedbackService = {
   async create(userId: string, rating: number, comment?: string | null) {
-    return prisma.$transaction(async (tx) => {
-      const feedback = await tx.feedback.create({
-        data: {
-          userId,
-          rating,
-          comment: comment ?? null,
-        },
-        include: {
-          user: {
-            select: { id: true, firstName: true, lastName: true, email: true },
-          },
-        },
-      });
-
-      await logActivity(
-        tx,
+    return prisma.feedback.create({
+      data: {
         userId,
-        "Submitted Feedback",
-        `Feedback ${feedback.id} with rating ${rating}`
-      );
-
-      return feedback;
+        rating,
+        comment: comment ?? null,
+      },
+      include: {
+        user: { select: { id: true, firstName: true, lastName: true, email: true } },
+      },
     });
   },
 
@@ -39,24 +25,13 @@ export const FeedbackService = {
   },
 
   async respond(feedbackId: string, adminId: string, response: string) {
-    return prisma.$transaction(async (tx) => {
-      const feedback = await tx.feedback.update({
-        where: { id: feedbackId },
-        data: {
-          response,
-          respondedAt: new Date(),
-          respondedById: adminId,
-        },
-      });
-
-      await logActivity(
-        tx,
-        adminId,
-        "Responded to Feedback",
-        `Responded to feedback ${feedbackId}`
-      );
-
-      return feedback;
+    return prisma.feedback.update({
+      where: { id: feedbackId },
+      data: {
+        response,
+        respondedAt: new Date(),
+        respondedById: adminId,
+      },
     });
   },
 };

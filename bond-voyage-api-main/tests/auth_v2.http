@@ -5,7 +5,7 @@
 ### Variables
 @baseUrl = http://localhost:8087/api/v1
 @prodUrl = https://bond-voyage-api.onrender.com/api/v1
-@accessToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI4NDhkNDAzZi01OTQ1LTRjZjYtOGVhZi1jZDdhYWQ2M2ZhNmEiLCJlbWFpbCI6ImZlbGl4YW5nZWxvbWVsZ2FyNUBnbWFpbC5jb20iLCJwaG9uZU51bWJlciI6IjA5NjEyMTMzNTIwIiwicm9sZSI6IlVTRVIiLCJpYXQiOjE3NjU5MDg1MzUsImV4cCI6MTc2NTkwOTM3NX0.rum_44IoeaVpCtDYVdibDXQV3rGl28SMB5okzRzfLTk
+@accessToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJmYTY3NDg0YS0yNWVkLTQxNDEtOWQ3YS03ODRhMTI1ODNlZmUiLCJlbWFpbCI6ImZlbGl4YW5nZWxvbWVsZ2FyNUBnbWFpbC5jb20iLCJwaG9uZU51bWJlciI6IjA5NjEyMTMzNTIwIiwicm9sZSI6IlVTRVIiLCJpYXQiOjE3NjYxNjI0MTYsImV4cCI6MTc2NjE2MzI1Nn0.79bpd_UNhTexZqAZjCg1ekBe-ijk1wkSMNKPQY36Hz0
 @adminEmail = senyahmelchi124@gmail.com
 @adminPassword = Admin@123
 @userEmail = felixangelomelgar5@gmail.com
@@ -77,7 +77,7 @@ Content-Type: application/json
 ### ========================================
 ### 4. LOGIN AS USER (Success)
 ### ========================================
-POST {{prodUrl}}/auth/login
+POST {{baseUrl}}/auth/login
 Content-Type: application/json
 
 {
@@ -152,7 +152,7 @@ Content-Type: application/json
 ### 9. REFRESH TOKEN
 ### ========================================
 ### Note: Must have refreshToken cookie from previous login
-POST {{prodUrl}}/auth/refresh-token
+POST {{baseUrl}}/auth/refresh-token
 Content-Type: application/json
 
 ### ========================================
@@ -166,7 +166,7 @@ Authorization: Bearer {{accessToken}}
 ### 11. LOGOUT (Single Device)
 ### ========================================
 ### Replace YOUR_ACCESS_TOKEN with actual token from login
-POST {{prodUrl}}/auth/logout
+POST {{baseUrl}}/auth/logout
 Authorization: Bearer {{accessToken}}
 
 ### ========================================
@@ -196,14 +196,14 @@ Content-Type: application/json
 
 {
   "email": "{{userEmail}}",
-  "otp": "839125"
+  "otp": "235947"
 }
 
 ### ========================================
 ### 15. RESET PASSWORD (Password Reset Step 3)
 ### ========================================
 ### Must be called within 5 minutes of OTP verification
-POST {{prodUrl}}/auth/reset-password
+POST {{baseUrl}}/auth/reset-password
 Content-Type: application/json
 
 {

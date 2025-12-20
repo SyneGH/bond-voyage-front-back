@@ -1,35 +1,23 @@
 import { prisma } from "@/config/database";
 import { InquiryStatus } from "@prisma/client";
-import { logActivity } from "./activity-log.service";
 
 export const InquiryService = {
   async createInquiry(userId: string, subject: string, message: string) {
-    return prisma.$transaction(async (tx) => {
-      const inquiry = await tx.inquiry.create({
-        data: {
-          userId,
-          subject,
-          status: InquiryStatus.OPEN,
-          messages: {
-            create: {
-              senderId: userId,
-              content: message,
-            },
+    return prisma.inquiry.create({
+      data: {
+        userId,
+        subject,
+        status: InquiryStatus.OPEN,
+        messages: {
+          create: {
+            senderId: userId,
+            content: message,
           },
         },
-        include: {
-          messages: { orderBy: { sentAt: "asc" } },
-        },
-      });
-
-      await logActivity(
-        tx,
-        userId,
-        "Created Inquiry",
-        `Inquiry ${inquiry.id} created: ${subject}`
-      );
-
-      return inquiry;
+      },
+      include: {
+        messages: { orderBy: { sentAt: "asc" } },
+      },
     });
   },
 
@@ -44,40 +32,24 @@ export const InquiryService = {
     });
   },
 
-  async createMessage(
-    inquiryId: string,
-    senderId: string,
-    content: string,
-    isAdmin: boolean
-  ) {
-    return prisma.$transaction(async (tx) => {
-      const inquiry = await tx.inquiry.findUnique({
-        where: { id: inquiryId },
-        select: { userId: true },
-      });
+  async createMessage(inquiryId: string, senderId: string, content: string, isAdmin: boolean) {
+    const inquiry = await prisma.inquiry.findUnique({
+      where: { id: inquiryId },
+      select: { userId: true },
+    });
 
-      if (!inquiry) throw new Error("INQUIRY_NOT_FOUND");
+    if (!inquiry) throw new Error("INQUIRY_NOT_FOUND");
 
-      if (!isAdmin && inquiry.userId !== senderId) {
-        throw new Error("INQUIRY_FORBIDDEN");
-      }
+    if (!isAdmin && inquiry.userId !== senderId) {
+      throw new Error("INQUIRY_FORBIDDEN");
+    }
 
-      const message = await tx.message.create({
-        data: {
-          inquiryId,
-          senderId,
-          content,
-        },
-      });
-
-      await logActivity(
-        tx,
+    return prisma.message.create({
+      data: {
+        inquiryId,
         senderId,
-        "Sent Message",
-        `Message sent in inquiry ${inquiryId}`
-      );
-
-      return message;
+        content,
+      },
     });
   },
 };

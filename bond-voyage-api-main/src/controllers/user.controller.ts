@@ -259,7 +259,7 @@ class UserController {
       const { id: userId } = userIdParamDto.parse(req.params);
       const payload = updateUserAdminDto.parse(req.body);
 
-      const user = await userService.updateByIdWithLog(req.user!.userId, userId, payload);
+      const user = await userService.updateById(userId, payload);
 
       if (!user) {
         throwError(HTTP_STATUS.NOT_FOUND, "User not found");
