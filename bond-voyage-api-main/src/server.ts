@@ -6,8 +6,9 @@ dotenv.config();
 import app from "./app";
 import { prisma } from "@/config/database";
 import { redis } from "@/config/redis";
+import { env } from "@/config/env";
 
-const PORT = process.env.PORT || 8087;
+const PORT = Number(env.PORT) || 8087;
 
 // Database connection test
 async function connectDatabase() {

@@ -7,16 +7,28 @@ import routes from "@/routes";
 import { HTTP_STATUS } from "@/constants/constants";
 import { createResponse } from "@/utils/responseHandler";
 import { errorMiddleware } from "@/middlewares/error.middleware";
+import { env, resolveCorsOrigins } from "@/config/env";
 
 const app = express();
 
 // Security middleware
 app.use(helmet());
 
+const corsOrigins = resolveCorsOrigins();
+
 // CORS configuration
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL || "http://localhost:3000",
+    origin: (origin, callback) => {
+      if (!origin) {
+        callback(null, true);
+        return;
+      }
+
+      const isAllowed =
+        corsOrigins.includes("*") || corsOrigins.includes(origin);
+      callback(null, isAllowed);
+    },
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
@@ -28,8 +40,9 @@ app.use(
 app.use(morgan(':method :url :status :response-time ms - :res[content-length]'));
 
 // Body parsing middleware
-app.use(express.json({ limit: "10mb" }));
-app.use(express.urlencoded({ extended: true, limit: "10mb" }));
+const bodyLimit = env.BODY_LIMIT || "8mb";
+app.use(express.json({ limit: bodyLimit }));
+app.use(express.urlencoded({ extended: true, limit: bodyLimit }));
 
 // Cookie parsing middleware
 app.use(cookieParser());
