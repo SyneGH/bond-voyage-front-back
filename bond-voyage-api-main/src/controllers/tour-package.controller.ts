@@ -14,13 +14,13 @@ import { HTTP_STATUS } from "@/constants/constants";
 export const TourPackageController = {
   list: async (req: Request, res: Response): Promise<void> => {
     try {
-      const { page, limit, search, isActive } = tourPackageListQueryDto.parse(
+      const { page, limit, q, isActive } = tourPackageListQueryDto.parse(
         req.query
       );
       const result = await TourPackageService.list({
         page,
         limit,
-        search,
+        search: q,
         isActive,
       });
       createResponse(res, HTTP_STATUS.OK, "Tour packages retrieved", result.items, result.meta);

@@ -3,7 +3,8 @@ import { AuthenticatedRequest } from "@/types";
 import { BookingService } from "@/services/booking.service";
 import {
   bookingIdParamDto,
-  bookingListQueryDto,
+  bookingAdminListQueryDto,
+  bookingMyListQueryDto,
   collaboratorIdParamDto,
   createBookingDto,
   updateItineraryDto,
@@ -168,12 +169,13 @@ export const BookingController = {
         throwError(HTTP_STATUS.UNAUTHORIZED, "Unauthorized");
       }
 
-      const { page, limit } = bookingListQueryDto.parse(req.query);
+      const { page, limit, status } = bookingMyListQueryDto.parse(req.query);
 
       const result = await BookingService.getUserBookingsPaginated(
         req.user.userId,
         page,
-        limit
+        limit,
+        status as BookingStatus | undefined
       );
 
       createResponse(res, HTTP_STATUS.OK, "Bookings retrieved", result.items, result.meta);
@@ -198,9 +200,25 @@ export const BookingController = {
     res: Response
   ): Promise<void> => {
     try {
-      const { page, limit, status } = bookingListQueryDto.parse(req.query);
+      const {
+        page,
+        limit,
+        status,
+        type,
+        dateFrom,
+        dateTo,
+        q,
+        sort,
+      } = bookingAdminListQueryDto.parse(req.query);
       const result = await BookingService.getAllBookingsPaginated(
-        status as BookingStatus | undefined,
+        {
+          status: status as BookingStatus | undefined,
+          type,
+          dateFrom,
+          dateTo,
+          q,
+          sort,
+        },
         page,
         limit
       );

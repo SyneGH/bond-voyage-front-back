@@ -47,7 +47,7 @@ export const tourPackageIdParamDto = z.object({
 export const tourPackageListQueryDto = z.object({
   page: z.preprocess((val) => parseNumber(val, 1), z.number().int().min(1)),
   limit: z.preprocess((val) => parseNumber(val, 10), z.number().int().min(1)),
-  search: z.string().optional(),
+  q: z.string().optional(),
   isActive: z
     .preprocess((value) => {
       if (value === undefined) return undefined;

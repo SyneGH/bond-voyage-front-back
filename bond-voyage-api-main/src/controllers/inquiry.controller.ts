@@ -6,6 +6,7 @@ import {
   addInquiryMessageDto,
   createInquiryDto,
   inquiryIdParamDto,
+  inquiryListQueryDto,
 } from "@/validators/inquiry.dto";
 import { AppError, createResponse, throwError } from "@/utils/responseHandler";
 import { HTTP_STATUS } from "@/constants/constants";
@@ -17,12 +18,21 @@ export const InquiryController = {
         throwError(HTTP_STATUS.UNAUTHORIZED, "Unauthorized");
       }
 
-      const inquiries = await InquiryService.listInquiries(
+      const { page, limit, bookingId } = inquiryListQueryDto.parse(req.query);
+
+      const result = await InquiryService.listInquiries(
         req.user.userId,
-        req.user.role === "ADMIN"
+        req.user.role === "ADMIN",
+        { page, limit, bookingId }
       );
 
-      createResponse(res, HTTP_STATUS.OK, "Inquiries retrieved", inquiries);
+      createResponse(
+        res,
+        HTTP_STATUS.OK,
+        "Inquiries retrieved",
+        result.items,
+        result.meta
+      );
     } catch (error) {
       if (error instanceof ZodError) {
         throwError(HTTP_STATUS.BAD_REQUEST, "Validation failed", error.errors);
@@ -48,7 +58,8 @@ export const InquiryController = {
       const inquiry = await InquiryService.createInquiry(
         req.user.userId,
         payload.subject,
-        payload.message
+        payload.message,
+        payload.bookingId
       );
 
       createResponse(res, HTTP_STATUS.CREATED, "Inquiry created", inquiry);

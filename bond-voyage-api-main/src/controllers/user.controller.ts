@@ -24,13 +24,21 @@ class UserController {
 
   // Generate cache keys
   private generateCacheKey = {
-    userList: (page: number, limit: number, search?: string, role?: string) =>
-      `users:list:page:${page}:limit:${limit}:search:${search || "none"}:role${
+    userList: (
+      page: number,
+      limit: number,
+      q?: string,
+      role?: string,
+      isActive?: boolean
+    ) =>
+      `users:list:page:${page}:limit:${limit}:q:${q || "none"}:role:${
         role || "all"
-      }`,
+      }:isActive:${isActive === undefined ? "all" : String(isActive)}`,
     singleUser: (id: string) => `user:${id}`,
-    userCount: (search?: string, role?: string) =>
-      `users:count:search:${search || "none"}:role:${role || "all"}`,
+    userCount: (q?: string, role?: string, isActive?: boolean) =>
+      `users:count:q:${q || "none"}:role:${role || "all"}:isActive:${
+        isActive === undefined ? "all" : String(isActive)
+      }`,
   };
 
   // Cache invalidation helpers
@@ -104,15 +112,18 @@ class UserController {
     res: Response
   ): Promise<void> => {
     try {
-      const { page, limit, search, role } = userListQueryDto.parse(req.query);
+      const { page, limit, q, role, isActive } = userListQueryDto.parse(
+        req.query
+      );
 
       const listCacheKey = this.generateCacheKey.userList(
         page,
         limit,
-        search,
-        role
+        q,
+        role,
+        isActive
       );
-      const countCacheKey = this.generateCacheKey.userCount(search, role);
+      const countCacheKey = this.generateCacheKey.userCount(q, role, isActive);
 
       const [cachedUsers, cachedCount] = await Promise.all([
         redis.get(listCacheKey),
@@ -127,7 +138,7 @@ class UserController {
           page,
           limit,
           total,
-          pages: Math.ceil(total / limit),
+          totalPages: Math.ceil(total / limit),
         };
 
         createResponse(
@@ -142,17 +153,21 @@ class UserController {
 
       let whereClause: Prisma.UserWhereInput = {};
 
-      if (search) {
+      if (q) {
         whereClause.OR = [
-          { firstName: { contains: search, mode: "insensitive" } },
-          { lastName: { contains: search, mode: "insensitive" } },
-          { email: { contains: search, mode: "insensitive" } },
-          { employeeId: { contains: search, mode: "insensitive" } },
+          { firstName: { contains: q, mode: "insensitive" } },
+          { lastName: { contains: q, mode: "insensitive" } },
+          { email: { contains: q, mode: "insensitive" } },
+          { employeeId: { contains: q, mode: "insensitive" } },
         ];
       }
 
       if (role) {
         whereClause.role = role as "USER" | "ADMIN";
+      }
+
+      if (typeof isActive === "boolean") {
+        whereClause.isActive = isActive;
       }
 
       const [users, total] = await Promise.all([
@@ -182,7 +197,7 @@ class UserController {
         page,
         limit,
         total,
-        pages: Math.ceil(total / limit),
+        totalPages: Math.ceil(total / limit),
       };
 
       createResponse(

@@ -16,11 +16,36 @@ export async function logActivity(
 }
 
 export const ActivityLogService = {
-  async list(params: { page: number; limit: number; userId?: string }) {
-    const { page, limit, userId } = params;
+  async list(params: {
+    page: number;
+    limit: number;
+    actorId?: string;
+    type?: string;
+    dateFrom?: Date;
+    dateTo?: Date;
+  }) {
+    const { page, limit, actorId, type, dateFrom, dateTo } = params;
     const skip = (page - 1) * limit;
 
-    const where = userId ? { userId } : undefined;
+    const where = {
+      ...(actorId ? { userId: actorId } : {}),
+      ...(type
+        ? {
+            action: {
+              contains: type,
+              mode: "insensitive" as const,
+            },
+          }
+        : {}),
+      ...(dateFrom || dateTo
+        ? {
+            timestamp: {
+              gte: dateFrom,
+              lte: dateTo,
+            },
+          }
+        : {}),
+    };
 
     const [items, total] = await prisma.$transaction([
       prisma.activityLog.findMany({
