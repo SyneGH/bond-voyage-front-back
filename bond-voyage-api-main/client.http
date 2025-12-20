@@ -169,7 +169,7 @@ Content-Type: application/json
   "amount": 10000,
   "method": "GCASH",
   "type": "PARTIAL",
-  "proofImageBase64": "aGVsbG8=",
+  "proofImageBase64": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAASsJTYQAAAAASUVORK5CYII=",
   "proofMimeType": "image/png",
   "transactionId": "TXN-10001"
 }

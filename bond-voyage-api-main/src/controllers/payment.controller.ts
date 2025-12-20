@@ -23,15 +23,31 @@ export const PaymentController = {
 
       let proofImage: Buffer | undefined;
       let proofSize: number | undefined;
+      let proofMimeType = payload.proofMimeType ?? undefined;
       const maxBytes = 5 * 1024 * 1024;
 
       if (payload.proofImageBase64) {
-        const base64 = payload.proofImageBase64.includes(",")
-          ? payload.proofImageBase64.split(",").pop()
-          : payload.proofImageBase64;
+        const dataUrlMatch = payload.proofImageBase64.match(
+          /^data:(.+);base64,/
+        );
+        const base64 = payload.proofImageBase64.replace(
+          /^data:.+;base64,/,
+          ""
+        );
+
+        if (dataUrlMatch && !proofMimeType) {
+          proofMimeType = dataUrlMatch[1];
+        }
 
         if (!base64) {
           throwError(HTTP_STATUS.BAD_REQUEST, "Invalid proof image");
+        }
+
+        if (!proofMimeType) {
+          throwError(
+            HTTP_STATUS.BAD_REQUEST,
+            "Proof mime type is required when uploading proof image"
+          );
         }
 
         proofImage = Buffer.from(base64, "base64");
@@ -49,7 +65,7 @@ export const PaymentController = {
         method: payload.method,
         type: payload.type,
         proofImage,
-        proofMimeType: payload.proofMimeType ?? undefined,
+        proofMimeType,
         proofSize,
         transactionId: payload.transactionId ?? undefined,
       });
