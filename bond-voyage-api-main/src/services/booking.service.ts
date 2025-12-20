@@ -27,7 +27,7 @@ interface CreateBookingDTO {
 export const BookingService = {
   async createBooking(data: CreateBookingDTO) {
     return prisma.$transaction(async (tx) => {
-      return tx.booking.create({
+      const booking = await tx.booking.create({
         data: {
           userId: data.userId,
           destination: data.destination,
@@ -54,6 +54,15 @@ export const BookingService = {
           itinerary: { include: { activities: true } },
         },
       });
+
+      await logActivity(
+        tx,
+        data.userId,
+        "Created Booking",
+        `Created booking ${booking.id} for ${booking.destination}`
+      );
+
+      return booking;
     });
   },
 
@@ -110,7 +119,7 @@ export const BookingService = {
 
       await tx.itineraryDay.deleteMany({ where: { bookingId } });
 
-      return tx.booking.update({
+      const updated = await tx.booking.update({
         where: { id: bookingId },
         data: {
           destination: data.destination,
@@ -131,6 +140,15 @@ export const BookingService = {
           },
         },
       });
+
+      await logActivity(
+        tx,
+        userId,
+        "Updated Booking",
+        `Updated itinerary for booking ${bookingId}`
+      );
+
+      return updated;
     });
   },
 
@@ -138,16 +156,38 @@ export const BookingService = {
     bookingId: string,
     status: BookingStatus,
     reason?: string,
-    resolution?: string
+    resolution?: string,
+    actorId?: string
   ) {
-    return prisma.booking.update({
-      where: { id: bookingId },
-      data: {
-        status,
-        rejectionReason: status === "REJECTED" ? reason : null,
-        rejectionResolution: status === "REJECTED" ? resolution : null,
-        isResolved: ["CONFIRMED", "REJECTED", "CANCELLED"].includes(status),
-      },
+    return prisma.$transaction(async (tx) => {
+      const updated = await tx.booking.update({
+        where: { id: bookingId },
+        data: {
+          status,
+          rejectionReason: status === "REJECTED" ? reason : null,
+          rejectionResolution: status === "REJECTED" ? resolution : null,
+          isResolved: ["CONFIRMED", "REJECTED", "CANCELLED"].includes(status),
+        },
+      });
+
+      if (actorId) {
+        const action =
+          status === "CONFIRMED"
+            ? "Approved Booking"
+            : status === "REJECTED"
+              ? "Rejected Booking"
+              : status === "COMPLETED"
+                ? "Completed Booking"
+                : "Updated Booking Status";
+        await logActivity(
+          tx,
+          actorId,
+          action,
+          `Status set to ${status} for booking ${bookingId}`
+        );
+      }
+
+      return updated;
     });
   },
 
@@ -257,38 +297,165 @@ export const BookingService = {
   },
 
   async submitBooking(bookingId: string, userId: string) {
-    const booking = await prisma.booking.findFirst({
-      where: { id: bookingId, userId },
-      select: { id: true, status: true },
-    });
+    return prisma.$transaction(async (tx) => {
+      const booking = await tx.booking.findFirst({
+        where: { id: bookingId, userId },
+        select: { id: true, status: true },
+      });
 
-    if (!booking) throw new Error("BOOKING_NOT_FOUND");
-    if (booking.status !== "DRAFT") throw new Error("CANNOT_SUBMIT");
+      if (!booking) throw new Error("BOOKING_NOT_FOUND");
+      if (booking.status !== "DRAFT") throw new Error("CANNOT_SUBMIT");
 
-    return prisma.booking.update({
-      where: { id: bookingId },
-      data: {
-        status: "PENDING",
-      },
+      const updated = await tx.booking.update({
+        where: { id: bookingId },
+        data: {
+          status: "PENDING",
+        },
+      });
+
+      await logActivity(
+        tx,
+        userId,
+        "Submitted Booking",
+        `Submitted booking ${bookingId} for approval`
+      );
+
+      return updated;
     });
   },
 
   async cancelBooking(bookingId: string, userId: string) {
-    const booking = await prisma.booking.findFirst({
-      where: { id: bookingId, userId },
-      select: { id: true, status: true },
+    return prisma.$transaction(async (tx) => {
+      const booking = await tx.booking.findFirst({
+        where: { id: bookingId, userId },
+        select: { id: true, status: true },
+      });
+
+      if (!booking) throw new Error("BOOKING_NOT_FOUND");
+
+      // common rule: allow cancel if not completed
+      if (["COMPLETED", "CANCELLED"].includes(booking.status)) {
+        throw new Error("CANNOT_CANCEL");
+      }
+
+      const updated = await tx.booking.update({
+        where: { id: bookingId },
+        data: { status: "CANCELLED", isResolved: true },
+      });
+
+      await logActivity(
+        tx,
+        userId,
+        "Cancelled Booking",
+        `Cancelled booking ${bookingId}`
+      );
+
+      return updated;
+    });
+  },
+
+  async addCollaborator(
+    bookingId: string,
+    ownerId: string,
+    collaboratorId: string
+  ) {
+    return prisma.$transaction(async (tx) => {
+      const booking = await tx.booking.findFirst({
+        where: { id: bookingId, userId: ownerId },
+      });
+
+      if (!booking) throw new Error("BOOKING_NOT_FOUND");
+
+      if (booking.userId === collaboratorId) {
+        throw new Error("CANNOT_ADD_OWNER");
+      }
+
+      const existing = await tx.bookingCollaborator.findUnique({
+        where: {
+          bookingId_userId: {
+            bookingId,
+            userId: collaboratorId,
+          },
+        },
+      });
+
+      if (existing) {
+        throw new Error("COLLABORATOR_EXISTS");
+      }
+
+      const collaborator = await tx.bookingCollaborator.create({
+        data: {
+          bookingId,
+          userId: collaboratorId,
+        },
+      });
+
+      await logActivity(
+        tx,
+        ownerId,
+        "Added Collaborator",
+        `Added collaborator ${collaboratorId} to booking ${bookingId}`
+      );
+
+      return collaborator;
+    });
+  },
+
+  async listCollaborators(bookingId: string, userId: string) {
+    const booking = await prisma.booking.findUnique({
+      where: { id: bookingId },
+      include: {
+        collaborators: {
+          include: {
+            user: {
+              select: { id: true, firstName: true, lastName: true, email: true },
+            },
+          },
+        },
+      },
     });
 
     if (!booking) throw new Error("BOOKING_NOT_FOUND");
 
-    // common rule: allow cancel if not completed
-    if (["COMPLETED", "CANCELLED"].includes(booking.status)) {
-      throw new Error("CANNOT_CANCEL");
+    const isOwner = booking.userId === userId;
+    const isCollaborator = booking.collaborators.some(
+      (collab) => collab.userId === userId
+    );
+
+    if (!isOwner && !isCollaborator) {
+      throw new Error("BOOKING_FORBIDDEN");
     }
 
-    return prisma.booking.update({
-      where: { id: bookingId },
-      data: { status: "CANCELLED", isResolved: true },
+    return booking.collaborators;
+  },
+
+  async removeCollaborator(
+    bookingId: string,
+    ownerId: string,
+    collaboratorId: string
+  ) {
+    return prisma.$transaction(async (tx) => {
+      const booking = await tx.booking.findFirst({
+        where: { id: bookingId, userId: ownerId },
+      });
+
+      if (!booking) throw new Error("BOOKING_NOT_FOUND");
+
+      const removed = await tx.bookingCollaborator.deleteMany({
+        where: {
+          id: collaboratorId,
+          bookingId,
+        },
+      });
+
+      await logActivity(
+        tx,
+        ownerId,
+        "Removed Collaborator",
+        `Removed collaborator ${collaboratorId} from booking ${bookingId}`
+      );
+
+      return removed;
     });
   },
 
