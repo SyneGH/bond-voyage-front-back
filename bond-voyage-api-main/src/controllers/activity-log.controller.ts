@@ -9,8 +9,16 @@ import { HTTP_STATUS } from "@/constants/constants";
 export const ActivityLogController = {
   list: async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
-      const { page, limit, userId } = activityLogListQueryDto.parse(req.query);
-      const result = await ActivityLogService.list({ page, limit, userId });
+      const { page, limit, actorId, type, dateFrom, dateTo } =
+        activityLogListQueryDto.parse(req.query);
+      const result = await ActivityLogService.list({
+        page,
+        limit,
+        actorId,
+        type,
+        dateFrom,
+        dateTo,
+      });
       createResponse(res, HTTP_STATUS.OK, "Activity logs retrieved", result.items, result.meta);
     } catch (error) {
       if (error instanceof ZodError) {

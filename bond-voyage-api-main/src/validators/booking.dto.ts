@@ -11,6 +11,19 @@ const parseNumber = (value: unknown, fallback: number) => {
   return fallback;
 };
 
+const dateQuerySchema = z.preprocess((value) => {
+  if (value instanceof Date) {
+    return value;
+  }
+  if (typeof value === "string" || typeof value === "number") {
+    const date = new Date(value);
+    if (!Number.isNaN(date.getTime())) {
+      return date;
+    }
+  }
+  return undefined;
+}, z.date().optional());
+
 const dateSchema = z.preprocess((value) => {
   if (value instanceof Date) {
     return value;
@@ -111,5 +124,27 @@ export const bookingListQueryDto = z.object({
   limit: z.preprocess((val) => parseNumber(val, 10), z.number().int().min(1)),
   status: z
     .enum(["DRAFT", "PENDING", "CONFIRMED", "REJECTED", "COMPLETED", "CANCELLED"])
+    .optional(),
+});
+
+export const bookingMyListQueryDto = bookingListQueryDto;
+
+export const bookingAdminListQueryDto = z.object({
+  page: z.preprocess((val) => parseNumber(val, 1), z.number().int().min(1)),
+  limit: z.preprocess((val) => parseNumber(val, 10), z.number().int().min(1)),
+  status: z
+    .enum(["DRAFT", "PENDING", "CONFIRMED", "REJECTED", "COMPLETED", "CANCELLED"])
+    .optional(),
+  type: z.enum(["STANDARD", "CUSTOMIZED", "REQUESTED"]).optional(),
+  dateFrom: dateQuerySchema,
+  dateTo: dateQuerySchema,
+  q: z.string().optional(),
+  sort: z
+    .enum([
+      "createdAt:asc",
+      "createdAt:desc",
+      "startDate:asc",
+      "startDate:desc",
+    ])
     .optional(),
 });

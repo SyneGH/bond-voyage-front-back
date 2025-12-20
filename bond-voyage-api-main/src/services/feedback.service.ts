@@ -14,14 +14,34 @@ export const FeedbackService = {
     });
   },
 
-  async list() {
-    return prisma.feedback.findMany({
-      orderBy: { createdAt: "desc" },
-      include: {
-        user: { select: { id: true, firstName: true, lastName: true, email: true } },
-        respondedBy: { select: { id: true, firstName: true, lastName: true, email: true } },
+  async list(params: { page: number; limit: number }) {
+    const { page, limit } = params;
+    const skip = (page - 1) * limit;
+
+    const [items, total] = await prisma.$transaction([
+      prisma.feedback.findMany({
+        orderBy: { createdAt: "desc" },
+        include: {
+          user: { select: { id: true, firstName: true, lastName: true, email: true } },
+          respondedBy: {
+            select: { id: true, firstName: true, lastName: true, email: true },
+          },
+        },
+        skip,
+        take: limit,
+      }),
+      prisma.feedback.count(),
+    ]);
+
+    return {
+      items,
+      meta: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
       },
-    });
+    };
   },
 
   async respond(feedbackId: string, adminId: string, response: string) {

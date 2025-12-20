@@ -216,13 +216,19 @@ export const BookingService = {
   async getUserBookingsPaginated(
     userId: string,
     page = 1,
-    limit = 10
+    limit = 10,
+    status?: BookingStatus
   ) {
     const skip = (page - 1) * limit;
+    const whereClause: Prisma.BookingWhereInput = { userId };
+
+    if (status) {
+      whereClause.status = status;
+    }
 
     const [items, total] = await prisma.$transaction([
       prisma.booking.findMany({
-        where: { userId },
+        where: whereClause,
         select: {
           id: true,
           destination: true,
@@ -238,7 +244,7 @@ export const BookingService = {
         skip,
         take: limit,
       }),
-      prisma.booking.count({ where: { userId } }),
+      prisma.booking.count({ where: whereClause }),
     ]);
 
     return {
@@ -253,12 +259,68 @@ export const BookingService = {
   },
 
   async getAllBookingsPaginated(
-    status?: BookingStatus,
+    filters: {
+      status?: BookingStatus;
+      type?: "STANDARD" | "CUSTOMIZED" | "REQUESTED";
+      dateFrom?: Date;
+      dateTo?: Date;
+      q?: string;
+      sort?: "createdAt:asc" | "createdAt:desc" | "startDate:asc" | "startDate:desc";
+    },
     page = 1,
     limit = 10
   ) {
     const skip = (page - 1) * limit;
-    const whereClause = status ? { status } : undefined;
+    const whereClause: Prisma.BookingWhereInput = {};
+
+    if (filters.status) {
+      whereClause.status = filters.status;
+    }
+
+    if (filters.type) {
+      whereClause.type = filters.type;
+    }
+
+    if (filters.dateFrom || filters.dateTo) {
+      whereClause.startDate = {
+        gte: filters.dateFrom,
+        lte: filters.dateTo,
+      };
+    }
+
+    if (filters.q) {
+      whereClause.OR = [
+        { destination: { contains: filters.q, mode: "insensitive" } },
+        {
+          user: {
+            firstName: { contains: filters.q, mode: "insensitive" },
+          },
+        },
+        {
+          user: {
+            lastName: { contains: filters.q, mode: "insensitive" },
+          },
+        },
+        {
+          user: {
+            email: { contains: filters.q, mode: "insensitive" },
+          },
+        },
+      ];
+    }
+
+    const orderBy = (() => {
+      switch (filters.sort) {
+        case "createdAt:asc":
+          return { createdAt: "asc" } as const;
+        case "startDate:asc":
+          return { startDate: "asc" } as const;
+        case "startDate:desc":
+          return { startDate: "desc" } as const;
+        default:
+          return { createdAt: "desc" } as const;
+      }
+    })();
 
     const [items, total] = await prisma.$transaction([
       prisma.booking.findMany({
@@ -266,7 +328,7 @@ export const BookingService = {
         include: {
           user: { select: { firstName: true, lastName: true, email: true } },
         },
-        orderBy: { createdAt: "desc" },
+        orderBy,
         skip,
         take: limit,
       }),

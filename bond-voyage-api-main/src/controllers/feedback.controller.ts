@@ -5,6 +5,7 @@ import { AuthenticatedRequest } from "@/types";
 import {
   createFeedbackDto,
   feedbackIdParamDto,
+  feedbackListQueryDto,
   respondFeedbackDto,
 } from "@/validators/feedback.dto";
 import { AppError, createResponse, throwError } from "@/utils/responseHandler";
@@ -38,8 +39,15 @@ export const FeedbackController = {
 
   list: async (_req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
-      const feedback = await FeedbackService.list();
-      createResponse(res, HTTP_STATUS.OK, "Feedback retrieved", feedback);
+      const { page, limit } = feedbackListQueryDto.parse(req.query);
+      const result = await FeedbackService.list({ page, limit });
+      createResponse(
+        res,
+        HTTP_STATUS.OK,
+        "Feedback retrieved",
+        result.items,
+        result.meta
+      );
     } catch (error) {
       if (error instanceof AppError) {
         throw error;
