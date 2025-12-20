@@ -139,7 +139,8 @@ export const BookingController = {
         id,
         payload.status as BookingStatus,
         payload.rejectionReason,
-        payload.rejectionResolution
+        payload.rejectionResolution,
+        req.user?.userId
       );
       createResponse(res, HTTP_STATUS.OK, "Booking status updated", updated);
     } catch (error) {

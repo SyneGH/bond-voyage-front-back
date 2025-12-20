@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import { AuthenticatedRequest } from "@/types";
 import { ZodError } from "zod";
 import { TourPackageService } from "@/services/tour-package.service";
 import {

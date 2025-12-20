@@ -78,7 +78,7 @@ class UserController {
         throwError(HTTP_STATUS.CONFLICT, message);
       }
 
-      const user = await userService.create(payload);
+      const user = await userService.createWithLog(req.user!.userId, payload);
 
       createResponse(res, HTTP_STATUS.CREATED, "User registered successfully", {
         user: userService.transformUser(user),
@@ -294,7 +294,7 @@ class UserController {
       }
 
       const updateData = updateProfileDto.parse(req.body);
-      const user = await userService.updateProfile(userId, updateData);
+      const user = await userService.updateProfileWithLog(userId, updateData);
 
       if (!user) {
         throwError(HTTP_STATUS.BAD_REQUEST, "User not found");
@@ -323,7 +323,7 @@ class UserController {
   ): Promise<void> => {
     try {
       const { id: userId } = userIdParamDto.parse(req.params);
-      const user = await userService.deactivate(userId);
+      const user = await userService.deactivateWithLog(req.user!.userId, userId);
 
       if (!user) {
         throwError(HTTP_STATUS.NOT_FOUND, "User not found");
@@ -350,7 +350,7 @@ class UserController {
   ): Promise<void> => {
     try {
       const { id: userId } = userIdParamDto.parse(req.params);
-      const user = await userService.delete(userId);
+      const user = await userService.deleteWithLog(req.user!.userId, userId);
 
       if (!user) {
         throwError(HTTP_STATUS.NOT_FOUND, "User not found");
