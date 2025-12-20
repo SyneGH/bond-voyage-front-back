@@ -1,5 +1,5 @@
 import { prisma } from "@/config/database";
-import { BookingStatus } from "@prisma/client";
+import { BookingStatus, BookingType } from "@prisma/client";
 
 const MONTH_LABELS = [
   "Jan",
@@ -67,17 +67,17 @@ export const DashboardService = {
 
     const bookingsInYear = await prisma.booking.findMany({
       where: {
-        createdAt: {
+        startDate: {
           gte: yearStart,
           lt: nextYearStart,
         },
       },
-      select: { createdAt: true },
+      select: { startDate: true },
     });
 
     const historical = Array.from({ length: 12 }, () => 0);
     bookingsInYear.forEach((booking) => {
-      const monthIndex = booking.createdAt.getUTCMonth();
+      const monthIndex = booking.startDate.getUTCMonth();
       if (monthIndex >= 0 && monthIndex < 12) {
         historical[monthIndex] += 1;
       }
