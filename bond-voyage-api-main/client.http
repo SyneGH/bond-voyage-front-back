@@ -75,6 +75,11 @@ Content-Type: application/json
   "status": "VERIFIED"
 }
 
+### Payments: Proof download (owner/admin)
+# Expected response: raw bytes with Content-Type = proofMimeType (or application/octet-stream)
+GET http://localhost:8087/api/v1/payments/{{paymentId}}/proof
+Authorization: Bearer {{accessToken}}
+
 ### Inquiries: Create (user)
 POST http://localhost:8087/api/v1/inquiries
 Authorization: Bearer {{userToken}}

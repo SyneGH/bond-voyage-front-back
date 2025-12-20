@@ -42,4 +42,22 @@ export const PaymentService = {
       data: { status },
     });
   },
+
+  async getPaymentProof(paymentId: string) {
+    return prisma.payment.findUnique({
+      where: { id: paymentId },
+      select: {
+        id: true,
+        proofImage: true,
+        proofMimeType: true,
+        proofSize: true,
+        submittedById: true,
+        booking: {
+          select: {
+            userId: true,
+          },
+        },
+      },
+    });
+  },
 };
