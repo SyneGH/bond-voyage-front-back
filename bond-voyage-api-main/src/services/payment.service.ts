@@ -7,7 +7,9 @@ interface CreatePaymentInput {
   amount: number;
   method?: "CASH" | "GCASH";
   type?: "FULL" | "PARTIAL";
-  proofUrl?: string | null;
+  proofImage?: Buffer;
+  proofMimeType?: string;
+  proofSize?: number;
   transactionId?: string | null;
 }
 
@@ -26,7 +28,9 @@ export const PaymentService = {
         amount: data.amount as unknown as Prisma.Decimal,
         method: data.method ?? "GCASH",
         type: data.type ?? "PARTIAL",
-        proofUrl: data.proofUrl ?? null,
+        proofImage: data.proofImage,
+        proofMimeType: data.proofMimeType ?? null,
+        proofSize: data.proofSize ?? null,
         transactionId: data.transactionId ?? null,
       },
     });

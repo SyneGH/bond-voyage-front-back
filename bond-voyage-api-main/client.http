@@ -1,8 +1,8 @@
-@accessToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJmZDAyMjVhNy04YTFkLTQzMDYtOTY1MC03MmIxYTRkNzgxZGUiLCJlbWFpbCI6InVzZXJAZXhhbXBsZS5jb20iLCJwaG9uZU51bWJlciI6IisxMjM0NTY3ODkxIiwicm9sZSI6IlVTRVIiLCJpYXQiOjE3NjYxNjkxMDksImV4cCI6MTc2NjE2OTk0OX0.7SnZjxYQuOrkoDqD5mmRR_xhDPjuJU5w5-lz0gKFKtM
-@userToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJmZDAyMjVhNy04YTFkLTQzMDYtOTY1MC03MmIxYTRkNzgxZGUiLCJlbWFpbCI6InVzZXJAZXhhbXBsZS5jb20iLCJwaG9uZU51bWJlciI6IisxMjM0NTY3ODkxIiwicm9sZSI6IlVTRVIiLCJpYXQiOjE3NjYxNjY3MzMsImV4cCI6MTc2NjE2NzU3M30.LeAJ2Q5tHxF5_MkaFZGpNZZvx-OPUgZQLnTvHbGmGc0
-@bookingId = 1b55c384-5bbd-4847-84b5-1c15a3260617
+@accessToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiIwOWQ1NTVhYS1kZjI0LTQwY2MtYTA5NS00M2FlNjRiZWFhZDYiLCJlbWFpbCI6ImFkbWluQGV4YW1wbGUuY29tIiwicGhvbmVOdW1iZXIiOiIrMTIzNDU2Nzg5MCIsInJvbGUiOiJBRE1JTiIsImlhdCI6MTc2NjIwODExMywiZXhwIjoxNzY2MjA4OTUzfQ.yMtFyekPaFX6QLf9qMhdqttmktW8FBuwNGDzuKLF_Mk
+@userToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJmZDAyMjVhNy04YTFkLTQzMDYtOTY1MC03MmIxYTRkNzgxZGUiLCJlbWFpbCI6InVzZXJAZXhhbXBsZS5jb20iLCJwaG9uZU51bWJlciI6IisxMjM0NTY3ODkxIiwicm9sZSI6IlVTRVIiLCJpYXQiOjE3NjYyMDc1NjUsImV4cCI6MTc2NjIwODQwNX0.kpVZsjakVGArhpM1_anWtcZ4wCHKgv_PvtO6wjkGQVM
+@bookingId = 4babba4a-f1c9-47ef-968e-ccf31a07c40a
 @inquiryId = 712c3760-c28e-486e-8a40-ae6c8b218684
-@paymentId = 5d6f4e2a-3c9b-4f1e-8f2a-9b7e5d3c2a1b
+@paymentId = 97dae8fe-347e-4492-9b2d-bfb1e904223d
 @feedbackId = 9e8f7d6c-5b4a-4c3d-2e1f-0a9b8c7d6e5f
 @notificationId = 3fa85f64-5717-4562-b3fc-2c963f66afa6
 
@@ -11,8 +11,8 @@ POST http://localhost:8087/api/v1/auth/login
 Content-Type: application/json
 
 {
-  "email": "user@example.com",
-  "password": "User@123"
+  "email": "admin@example.com",
+  "password": "Admin@123"
 }
 
 ### Auth: Profile (requires token)
@@ -65,19 +65,6 @@ Content-Type: application/json
 ### Bookings: List collaborators (owner or collaborator)
 GET http://localhost:8087/api/v1/bookings/{{bookingId}}/collaborators
 Authorization: Bearer {{userToken}}
-
-### Payments: Submit proof (user)
-POST http://localhost:8087/api/v1/bookings/{{bookingId}}/payments
-Authorization: Bearer {{userToken}}
-Content-Type: application/json
-
-{
-  "amount": 10000,
-  "method": "GCASH",
-  "type": "PARTIAL",
-  "proofUrl": "https://example.com/proof.jpg",
-  "transactionId": "TXN-10001"
-}
 
 ### Payments: Verify (admin)
 PATCH http://localhost:8087/api/v1/payments/{{paymentId}}/status

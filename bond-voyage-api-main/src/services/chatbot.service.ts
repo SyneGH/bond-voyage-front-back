@@ -22,6 +22,7 @@ export const ChatbotService = {
 
   async respondRoaman(message: string, context?: string | null) {
     const apiKey = process.env.GEMINI_API_KEY;
+    const model = process.env.GEMINI_MODEL || "gemini-1.5-flash";
 
     if (!apiKey) {
       throw new Error("GEMINI_KEY_MISSING");
@@ -30,7 +31,7 @@ export const ChatbotService = {
     const prompt = context ? `${context}\n\nUser: ${message}` : message;
 
     const response = await axios.post(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2:generateContent?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
       {
         contents: [
           {

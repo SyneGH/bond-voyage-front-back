@@ -231,7 +231,9 @@ async function main() {
       method: PaymentMethod.GCASH,
       status: PaymentStatus.PENDING,
       type: PaymentType.PARTIAL,
-      proofUrl: "https://example.com/proof.jpg",
+      proofImage: Buffer.from("aGVsbG8=", "base64"),
+      proofMimeType: "image/png",
+      proofSize: Buffer.from("aGVsbG8=", "base64").length,
       transactionId: "TXN-10001",
     },
   });
