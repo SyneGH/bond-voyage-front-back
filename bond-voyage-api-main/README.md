@@ -69,16 +69,25 @@ A robust Node.js authentication boilerplate with TypeScript, Prisma ORM, Postgre
    Update the `.env` file with your configuration:
 
    ```env
-   DATABASE_URL="postgresql://postgres:postgres@localhost:5432/auth_db?schema=public"
+   DATABASE_URL="postgresql://postgres.ufofcsxhrrsnmbrotexw:[PASSWORD]@aws-1-ap-northeast-1.pooler.supabase.com:6543/postgres?pgbouncer=true"
+   DIRECT_URL="postgresql://postgres:[PASSWORD]@db.ufofcsxhrrsnmbrotexw.supabase.co:5432/postgres"
    JWT_ACCESS_SECRET=your-super-secret-jwt-access-key-here
    JWT_REFRESH_SECRET=your-super-secret-jwt-refresh-key-here
    JWT_ACCESS_EXPIRE=14m
    JWT_REFRESH_EXPIRE=7d
    PORT=8087
    NODE_ENV=development
-   REDIS_HOST=localhost
-   REDIS_PORT=6379
    BCRYPT_SALT_ROUNDS=12
+   REDIS_URL="rediss://default:[TOKEN]@wondrous-goblin-10903.upstash.io:6379"
+   REDIS_PORT=6379
+   FRONTEND_URL=http://localhost:3000
+   CORS_ORIGINS=http://localhost:3000
+   BODY_LIMIT=8mb
+   OPENWEATHER_API_KEY=[API KEY]
+   GEOAPIFY_API_KEY=[API KEY]
+   GEMINI_API_KEY=[API KEY]
+   GEMINI_MODEL=gemini-2.5-flash
+   BREVO_API_KEY=[API KEY]
    ```
 
 5. **Generate Prisma client and run migrations**
