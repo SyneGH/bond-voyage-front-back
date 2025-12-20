@@ -220,7 +220,9 @@ model Payment {
   status        PaymentStatus @default(PENDING)
   type          PaymentType   @default(PARTIAL)
   
-  proofUrl      String?       
+  proofImage    Bytes?
+  proofMimeType String?
+  proofSize     Int?       
   transactionId String?       
   
   createdAt     DateTime      @default(now())

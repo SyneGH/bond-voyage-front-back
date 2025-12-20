@@ -21,10 +21,37 @@ export const PaymentController = {
       const { id: bookingId } = bookingIdParamDto.parse(req.params);
       const payload = createPaymentDto.parse(req.body);
 
+      let proofImage: Buffer | undefined;
+      let proofSize: number | undefined;
+      const maxBytes = 5 * 1024 * 1024;
+
+      if (payload.proofImageBase64) {
+        const base64 = payload.proofImageBase64.includes(",")
+          ? payload.proofImageBase64.split(",").pop()
+          : payload.proofImageBase64;
+
+        if (!base64) {
+          throwError(HTTP_STATUS.BAD_REQUEST, "Invalid proof image");
+        }
+
+        proofImage = Buffer.from(base64, "base64");
+        proofSize = proofImage.length;
+
+        if (proofSize > maxBytes) {
+          throwError(HTTP_STATUS.BAD_REQUEST, "Proof image exceeds 5MB limit");
+        }
+      }
+
       const payment = await PaymentService.createPayment({
         bookingId,
         userId: req.user.userId,
-        ...payload,
+        amount: payload.amount,
+        method: payload.method,
+        type: payload.type,
+        proofImage,
+        proofMimeType: payload.proofMimeType ?? undefined,
+        proofSize,
+        transactionId: payload.transactionId ?? undefined,
       });
 
       createResponse(res, HTTP_STATUS.CREATED, "Payment submitted", payment);

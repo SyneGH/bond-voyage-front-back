@@ -4,7 +4,8 @@ export const createPaymentDto = z.object({
   amount: z.number().min(0),
   method: z.enum(["CASH", "GCASH"]).optional(),
   type: z.enum(["FULL", "PARTIAL"]).optional(),
-  proofUrl: z.string().url().optional().nullable(),
+  proofImageBase64: z.string().optional().nullable(),
+  proofMimeType: z.string().optional().nullable(),
   transactionId: z.string().optional().nullable(),
 });
 

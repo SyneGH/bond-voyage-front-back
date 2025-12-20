@@ -30,7 +30,7 @@ export const ChatbotService = {
     const prompt = context ? `${context}\n\nUser: ${message}` : message;
 
     const response = await axios.post(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2:generateContent?key=${apiKey}`,
       {
         contents: [
           {
