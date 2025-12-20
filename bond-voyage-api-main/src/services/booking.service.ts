@@ -372,7 +372,7 @@ export const BookingService = {
     return prisma.bookingCollaborator.deleteMany({
       where: {
         bookingId,
-        userId: collaboratorId,
+        id: collaboratorId,
       },
     });
   },

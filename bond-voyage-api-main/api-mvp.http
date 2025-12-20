@@ -1,0 +1,272 @@
+### =========================================
+### AUTH
+### =========================================
+POST http://localhost:8087/api/v1/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@example.com",
+  "password": "Admin@123"
+}
+
+###
+@accessToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiIwOWQ1NTVhYS1kZjI0LTQwY2MtYTA5NS00M2FlNjRiZWFhZDYiLCJlbWFpbCI6ImFkbWluQGV4YW1wbGUuY29tIiwicGhvbmVOdW1iZXIiOiIrMTIzNDU2Nzg5MCIsInJvbGUiOiJBRE1JTiIsImlhdCI6MTc2NjIxMzAzMSwiZXhwIjoxNzY2MjEzODcxfQ.JmAUrky_Tvip7MgLWCpsNro8Pgeu_dP34H8YanSal1Q
+
+### Refresh token (uses cookie from login)
+POST http://localhost:8087/api/v1/auth/refresh-token
+
+### Profile
+GET http://localhost:8087/api/v1/auth/profile
+Authorization: Bearer {{accessToken}}
+
+@userId = fa67484a-25ed-4141-9d7a-784a12583efe
+
+### =========================================
+### USERS (ADMIN)
+### =========================================
+GET http://localhost:8087/api/v1/users?page=1&limit=10
+Authorization: Bearer {{accessToken}}
+
+###
+GET http://localhost:8087/api/v1/users/{{userId}}
+Authorization: Bearer {{accessToken}}
+
+###
+PATCH http://localhost:8087/api/v1/users/{{userId}}
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "role": "ADMIN",
+  "isActive": true
+}
+
+### =========================================
+### TOUR PACKAGES
+### =========================================
+GET http://localhost:8087/api/v1/tour-packages?page=1&limit=10
+
+###
+POST http://localhost:8087/api/v1/tour-packages
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "title": "Baguio Escape",
+  "destination": "Baguio",
+  "category": "City",
+  "description": "2D/1N city escape",
+  "price": 8000,
+  "duration": 2,
+  "thumbUrl": "https://example.com/baguio.jpg",
+  "isActive": true,
+  "days": [
+    {
+      "dayNumber": 1,
+      "title": "Arrival",
+      "activities": [
+        { "time": "09:00", "title": "Check-in", "order": 1 }
+      ]
+    }
+  ]
+}
+
+@tourPackageId = 56fdd0a2-45ce-468b-9763-bb441d15ecc3
+
+###
+GET http://localhost:8087/api/v1/tour-packages/{{tourPackageId}}
+
+### =========================================
+### BOOKINGS (USER)
+### =========================================
+
+@userToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJmZDAyMjVhNy04YTFkLTQzMDYtOTY1MC03MmIxYTRkNzgxZGUiLCJlbWFpbCI6InVzZXJAZXhhbXBsZS5jb20iLCJwaG9uZU51bWJlciI6IisxMjM0NTY3ODkxIiwicm9sZSI6IlVTRVIiLCJpYXQiOjE3NjYyMTI0MDIsImV4cCI6MTc2NjIxMzI0Mn0.natgZ1T0KppHqv6CajJniCg--6cDsgMclwBGN7sxaNg
+
+###
+POST http://localhost:8087/api/v1/bookings
+Authorization: Bearer {{userToken}}
+Content-Type: application/json
+
+{
+  "destination": "Cebu",
+  "startDate": "2025-01-10",
+  "endDate": "2025-01-12",
+  "travelers": 2,
+  "totalPrice": 15000,
+  "type": "CUSTOMIZED",
+  "tourType": "PRIVATE",
+  "itinerary": [
+    {
+      "dayNumber": 1,
+      "activities": [
+        { "time": "09:00", "title": "Arrival", "order": 1 }
+      ]
+    }
+  ]
+}
+
+###
+GET http://localhost:8087/api/v1/bookings/my-bookings?page=1&limit=10
+Authorization: Bearer {{userToken}}
+
+###
+@bookingId = 3783cba1-e75f-42a9-b5f2-57abd8ea5ece
+
+###
+GET http://localhost:8087/api/v1/bookings/{{bookingId}}
+Authorization: Bearer {{userToken}}
+
+###
+PATCH http://localhost:8087/api/v1/bookings/{{bookingId}}/submit
+Authorization: Bearer {{userToken}}
+
+###
+PATCH http://localhost:8087/api/v1/bookings/{{bookingId}}/cancel
+Authorization: Bearer {{userToken}}
+
+### =========================================
+### COLLABORATION
+### =========================================
+POST http://localhost:8087/api/v1/bookings/{{bookingId}}/collaborators
+Authorization: Bearer {{userToken}}
+Content-Type: application/json
+
+{
+  "email": "collab@example.com"
+}
+
+###
+GET http://localhost:8087/api/v1/bookings/{{bookingId}}/collaborators
+Authorization: Bearer {{userToken}}
+
+###
+@collaboratorId = 6aa1914d-93fd-47a1-87d1-fe70f368c4a1
+
+###
+DELETE http://localhost:8087/api/v1/bookings/{{bookingId}}/collaborators/{{collaboratorId}}
+Authorization: Bearer {{userToken}}
+
+### =========================================
+### PAYMENTS
+### =========================================
+POST http://localhost:8087/api/v1/bookings/{{bookingId}}/payments
+Authorization: Bearer {{userToken}}
+Content-Type: application/json
+
+{
+  "amount": 10000,
+  "method": "GCASH",
+  "type": "PARTIAL",
+  "proofImageBase64": "aGVsbG8=",
+  "proofMimeType": "image/png",
+  "transactionId": "TXN-10001"
+}
+
+###
+@paymentId = 9f7ca968-680a-4309-b7db-bb031d59ffef
+
+###
+PATCH http://localhost:8087/api/v1/payments/{{paymentId}}/status
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{ "status": "VERIFIED" }
+
+### =========================================
+### INQUIRIES / MESSAGES
+### =========================================
+POST http://localhost:8087/api/v1/inquiries
+Authorization: Bearer {{userToken}}
+Content-Type: application/json
+
+{ "subject": "Visa", "message": "Do we need a visa?" }
+
+###
+GET http://localhost:8087/api/v1/inquiries
+Authorization: Bearer {{accessToken}}
+
+###
+@inquiryId = 9dba23f6-142a-4902-a656-7aaaa1d77483
+
+###
+POST http://localhost:8087/api/v1/inquiries/{{inquiryId}}/messages
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{ "content": "Please share nationality." }
+
+### =========================================
+### FEEDBACK
+### =========================================
+POST http://localhost:8087/api/v1/feedback
+Authorization: Bearer {{userToken}}
+Content-Type: application/json
+
+{ "rating": 5, "comment": "Great!" }
+
+###
+GET http://localhost:8087/api/v1/feedback
+Authorization: Bearer {{accessToken}}
+
+###
+@feedbackId = 2cf4cc48-15a9-47dd-9efc-50574bb039aa
+
+###
+PATCH http://localhost:8087/api/v1/feedback/{{feedbackId}}/respond
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{ "response": "Thanks for the feedback!" }
+
+### =========================================
+### ACTIVITY LOGS
+### =========================================
+GET http://localhost:8087/api/v1/activity-logs?page=1&limit=10
+Authorization: Bearer {{accessToken}}
+
+### =========================================
+### NOTIFICATIONS
+### =========================================
+GET http://localhost:8087/api/v1/notifications
+Authorization: Bearer {{userToken}}
+
+###
+@notificationId = 
+
+###
+PATCH http://localhost:8087/api/v1/notifications/{{notificationId}}/read
+Authorization: Bearer {{userToken}}
+
+### =========================================
+### WEATHER
+### =========================================
+GET http://localhost:8087/api/v1/weather?lat=14.5&lng=120.9842
+
+### =========================================
+### ROUTE OPTIMIZATION (GEOAPIFY)
+### =========================================
+POST http://localhost:8087/api/v1/routes/optimize
+Content-Type: application/json
+
+{
+  "origin": { "lat": 14.5995, "lng": 120.9842 },
+  "destination": { "lat": 16.4023, "lng": 120.5960 },
+  "waypoints": [{ "lat": 15.0, "lng": 120.5 }]
+}
+
+### =========================================
+### CHATBOTS
+### =========================================
+POST http://localhost:8087/api/v1/chatbots/roameo
+Content-Type: application/json
+
+{ "message": "How do I add collaborators?" }
+
+###
+POST http://localhost:8087/api/v1/chatbots/roaman
+Content-Type: application/json
+
+{
+  "message": "Build a 3-day Palawan itinerary.",
+  "context": "User prefers beaches and light activities."
+}
