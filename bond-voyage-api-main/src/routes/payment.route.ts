@@ -6,6 +6,12 @@ import { asyncHandler } from "@/middlewares/async.middleware";
 
 const router = Router();
 
+router.get(
+  "/:id/proof",
+  authenticate,
+  asyncHandler(PaymentController.getProof)
+);
+
 router.patch(
   "/:id/status",
   authenticate,

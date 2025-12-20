@@ -75,6 +75,11 @@ Content-Type: application/json
   "status": "VERIFIED"
 }
 
+### Payments: Proof download (owner/admin)
+# Expected response: raw bytes with Content-Type = proofMimeType (or application/octet-stream)
+GET http://localhost:8087/api/v1/payments/{{paymentId}}/proof
+Authorization: Bearer {{accessToken}}
+
 ### Inquiries: Create (user)
 POST http://localhost:8087/api/v1/inquiries
 Authorization: Bearer {{userToken}}
@@ -164,7 +169,7 @@ Content-Type: application/json
   "amount": 10000,
   "method": "GCASH",
   "type": "PARTIAL",
-  "proofImageBase64": "aGVsbG8=",
+  "proofImageBase64": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAASsJTYQAAAAASUVORK5CYII=",
   "proofMimeType": "image/png",
   "transactionId": "TXN-10001"
 }
