@@ -10,6 +10,7 @@ import { registerDto } from "@/validators/auth.dto";
 import {
   changePasswordDto,
   updateProfileDto,
+  updateUserAdminDto,
   userIdParamDto,
   userListQueryDto,
 } from "@/validators/user.dto";
@@ -77,7 +78,7 @@ class UserController {
         throwError(HTTP_STATUS.CONFLICT, message);
       }
 
-      const user = await userService.create(payload);
+      const user = await userService.createWithLog(req.user!.userId, payload);
 
       createResponse(res, HTTP_STATUS.CREATED, "User registered successfully", {
         user: userService.transformUser(user),
@@ -250,6 +251,36 @@ class UserController {
     }
   };
 
+  public updateUserById = async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<void> => {
+    try {
+      const { id: userId } = userIdParamDto.parse(req.params);
+      const payload = updateUserAdminDto.parse(req.body);
+
+      const user = await userService.updateByIdWithLog(req.user!.userId, userId, payload);
+
+      if (!user) {
+        throwError(HTTP_STATUS.NOT_FOUND, "User not found");
+      }
+
+      await this.invalidateUserCaches(userId);
+
+      createResponse(res, HTTP_STATUS.OK, "User updated successfully", {
+        user: userService.transformUser(user),
+      });
+    } catch (error) {
+      if (error instanceof ZodError) {
+        throwError(HTTP_STATUS.BAD_REQUEST, "Validation failed", error.errors);
+      }
+      if (error instanceof AppError) {
+        throw error;
+      }
+      throwError(HTTP_STATUS.BAD_REQUEST, "Failed to update user", error);
+    }
+  };
+
   // Update own profile
   public updateProfile = async (
     req: AuthenticatedRequest,
@@ -263,7 +294,7 @@ class UserController {
       }
 
       const updateData = updateProfileDto.parse(req.body);
-      const user = await userService.updateProfile(userId, updateData);
+      const user = await userService.updateProfileWithLog(userId, updateData);
 
       if (!user) {
         throwError(HTTP_STATUS.BAD_REQUEST, "User not found");
@@ -292,7 +323,7 @@ class UserController {
   ): Promise<void> => {
     try {
       const { id: userId } = userIdParamDto.parse(req.params);
-      const user = await userService.deactivate(userId);
+      const user = await userService.deactivateWithLog(req.user!.userId, userId);
 
       if (!user) {
         throwError(HTTP_STATUS.NOT_FOUND, "User not found");
@@ -319,7 +350,7 @@ class UserController {
   ): Promise<void> => {
     try {
       const { id: userId } = userIdParamDto.parse(req.params);
-      const user = await userService.delete(userId);
+      const user = await userService.deleteWithLog(req.user!.userId, userId);
 
       if (!user) {
         throwError(HTTP_STATUS.NOT_FOUND, "User not found");

@@ -1,4 +1,15 @@
-import { PrismaClient, UserRole, BookingType, BookingStatus, TourType } from "@prisma/client";
+import {
+  PrismaClient,
+  UserRole,
+  BookingType,
+  BookingStatus,
+  TourType,
+  PaymentMethod,
+  PaymentStatus,
+  PaymentType,
+  InquiryStatus,
+  NotificationType,
+} from "@prisma/client";
 import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
@@ -6,146 +17,279 @@ const prisma = new PrismaClient();
 async function main() {
   console.log("🌱 Starting database seeding...");
 
-  // ===========================================
-  // 1. SEED USERS (Flattened Structure)
-  // ===========================================
-
-  // --- Admin User ---
   const adminPassword = await bcrypt.hash("Admin@123", 12);
-  const admin = await prisma.user.upsert({
-    where: { email: "admin@example.com" },
-    update: {},
-    create: {
-      firstName: "Admin",
-      lastName: "BondVoyage",
-      email: "admin@example.com",
-      phoneNumber: "+1234567890",
-      password: adminPassword,
-      role: UserRole.ADMIN,
-      isActive: true,
-      // Admin Specific Fields (Now directly on User model)
-      companyName: "BondVoyage HQ",
-      customerRating: 4.95,
-    },
-  });
-  console.log("✅ Created Admin:", admin.email);
-
-  // --- Second Admin ---
-  const admin2 = await prisma.user.upsert({
-    where: { email: "sarah.admin@example.com" },
-    update: {},
-    create: {
-      firstName: "Sarah",
-      lastName: "Agency",
-      email: "sarah.admin@example.com",
-      phoneNumber: "+1122334455",
-      password: adminPassword,
-      role: UserRole.ADMIN,
-      isActive: true,
-      companyName: "Travel Solutions Co.",
-      customerRating: 4.72,
-    },
-  });
-  console.log("✅ Created Admin 2:", admin2.email);
-
-  // --- Regular User ---
   const userPassword = await bcrypt.hash("User@123", 12);
-  const user = await prisma.user.upsert({
-    where: { email: "user@example.com" },
-    update: {},
-    create: {
-      firstName: "John",
-      lastName: "Traveler",
-      email: "user@example.com",
-      phoneNumber: "+1234567891",
-      password: userPassword,
-      role: UserRole.USER,
-      isActive: true,
-    },
-  });
-  console.log("✅ Created User:", user.email);
 
-  // ===========================================
-  // 2. SEED TOUR PACKAGES (Standard Trips)
-  // ===========================================
-  
-  // Clean up old packages to avoid duplicates during dev
+  const [admin, admin2, user, collaborator] = await Promise.all([
+    prisma.user.upsert({
+      where: { email: "admin@example.com" },
+      update: {},
+      create: {
+        firstName: "Admin",
+        lastName: "BondVoyage",
+        email: "admin@example.com",
+        phoneNumber: "+1234567890",
+        password: adminPassword,
+        role: UserRole.ADMIN,
+        isActive: true,
+        companyName: "BondVoyage HQ",
+        customerRating: 4.95,
+      },
+    }),
+    prisma.user.upsert({
+      where: { email: "sarah.admin@example.com" },
+      update: {},
+      create: {
+        firstName: "Sarah",
+        lastName: "Agency",
+        email: "sarah.admin@example.com",
+        phoneNumber: "+1122334455",
+        password: adminPassword,
+        role: UserRole.ADMIN,
+        isActive: true,
+        companyName: "Travel Solutions Co.",
+        customerRating: 4.72,
+      },
+    }),
+    prisma.user.upsert({
+      where: { email: "user@example.com" },
+      update: {},
+      create: {
+        firstName: "John",
+        lastName: "Traveler",
+        email: "user@example.com",
+        phoneNumber: "+1234567891",
+        password: userPassword,
+        role: UserRole.USER,
+        isActive: true,
+      },
+    }),
+    prisma.user.upsert({
+      where: { email: "collab@example.com" },
+      update: {},
+      create: {
+        firstName: "Maria",
+        lastName: "Collaborator",
+        email: "collab@example.com",
+        phoneNumber: "+1234567892",
+        password: userPassword,
+        role: UserRole.USER,
+        isActive: true,
+      },
+    }),
+  ]);
+
+  console.log("✅ Created Admin:", admin.email);
+  console.log("✅ Created Admin 2:", admin2.email);
+  console.log("✅ Created User:", user.email);
+  console.log("✅ Created Collaborator:", collaborator.email);
+
+  await prisma.bookingCollaborator.deleteMany({});
+  await prisma.payment.deleteMany({});
+  await prisma.message.deleteMany({});
+  await prisma.inquiry.deleteMany({});
+  await prisma.notification.deleteMany({});
+  await prisma.feedback.deleteMany({});
+  await prisma.activityLog.deleteMany({});
+  await prisma.booking.deleteMany({});
   await prisma.tourPackage.deleteMany({});
 
-  await prisma.tourPackage.createMany({
-    data: [
-      {
-        destination: "El Nido Island Hopping",
-        price: 15000.00,
-        duration: 3, // Days
-        thumbUrl: "https://images.unsplash.com/photo-1540206351-d6465b3ac5c1",
-        isActive: true,
+  const tourPackage1 = await prisma.tourPackage.create({
+    data: {
+      title: "El Nido Island Hopping",
+      destination: "Palawan",
+      category: "Beach",
+      description: "Discover lagoons, beaches, and island tours.",
+      price: 15000.0,
+      duration: 3,
+      thumbUrl: "https://images.unsplash.com/photo-1540206351-d6465b3ac5c1",
+      isActive: true,
+      days: {
+        create: [
+          {
+            dayNumber: 1,
+            title: "Arrival & City Tour",
+            activities: {
+              create: [
+                {
+                  time: "08:00 AM",
+                  title: "Arrival at El Nido Airport",
+                  description: "Meet and greet",
+                  location: "El Nido Airport",
+                  icon: "Plane",
+                  order: 1,
+                },
+                {
+                  time: "01:00 PM",
+                  title: "Check-in",
+                  description: "Hotel check-in",
+                  location: "El Nido",
+                  icon: "Hotel",
+                  order: 2,
+                },
+              ],
+            },
+          },
+          {
+            dayNumber: 2,
+            title: "Island Hopping",
+            activities: {
+              create: [
+                {
+                  time: "09:00 AM",
+                  title: "Tour A",
+                  description: "Big Lagoon and Secret Lagoon",
+                  location: "El Nido",
+                  icon: "Boat",
+                  order: 1,
+                },
+              ],
+            },
+          },
+        ],
       },
-      {
-        destination: "Coron Ultimate Tour",
-        price: 18500.00,
-        duration: 4,
-        thumbUrl: "https://images.unsplash.com/photo-1518509562904-e7ef99cdcc86",
-        isActive: true,
-      },
-      {
-        destination: "Siargao Surf & Chill",
-        price: 12000.00,
-        duration: 5,
-        thumbUrl: "https://images.unsplash.com/photo-1534008897995-27a23e859048",
-        isActive: true,
-      }
-    ]
+    },
   });
-  console.log("✅ Created 3 Standard Tour Packages");
 
-  // ===========================================
-  // 3. SEED A COMPLEX BOOKING (With Itinerary)
-  // ===========================================
+  const tourPackage2 = await prisma.tourPackage.create({
+    data: {
+      title: "Coron Ultimate Tour",
+      destination: "Palawan",
+      category: "Adventure",
+      description: "Dive into shipwrecks and lakes.",
+      price: 18500.0,
+      duration: 4,
+      thumbUrl: "https://images.unsplash.com/photo-1518509562904-e7ef99cdcc86",
+      isActive: true,
+    },
+  });
 
-  // We delete existing bookings for this user to ensure a clean seed
-  await prisma.booking.deleteMany({ where: { userId: user.id } });
+  console.log("✅ Created Tour Packages:", tourPackage1.id, tourPackage2.id);
 
   const booking = await prisma.booking.create({
     data: {
       userId: user.id,
       destination: "Boracay Luxury Escape",
-      startDate: new Date("2024-06-01"),
-      endDate: new Date("2024-06-04"),
+      startDate: new Date("2025-06-01"),
+      endDate: new Date("2025-06-04"),
       travelers: 2,
-      totalPrice: 25000.00,
+      totalPrice: 25000.0,
       type: BookingType.CUSTOMIZED,
-      status: BookingStatus.PENDING, // Pending Admin Approval
+      status: BookingStatus.DRAFT,
       tourType: TourType.PRIVATE,
-      
-      // Nested Create: Itinerary & Activities
       itinerary: {
         create: [
           {
             dayNumber: 1,
             activities: {
               create: [
-                { time: "08:00 AM", title: "Arrival at Caticlan", icon: "Plane", order: 1 },
-                { time: "02:00 PM", title: "Check-in at Shangri-La", icon: "Hotel", order: 2 },
-                { time: "05:00 PM", title: "Sunset Sailing", icon: "Boat", order: 3 },
-              ]
-            }
+                {
+                  time: "08:00 AM",
+                  title: "Arrival at Caticlan",
+                  icon: "Plane",
+                  order: 1,
+                },
+                {
+                  time: "02:00 PM",
+                  title: "Check-in",
+                  icon: "Hotel",
+                  order: 2,
+                },
+              ],
+            },
           },
           {
             dayNumber: 2,
             activities: {
               create: [
-                { time: "09:00 AM", title: "Island Hopping Tour", icon: "Boat", order: 1 },
-                { time: "12:00 PM", title: "Lunch at Puka Beach", icon: "Utensils", order: 2 },
-              ]
-            }
-          }
-        ]
-      }
-    }
+                {
+                  time: "09:00 AM",
+                  title: "Island Hopping Tour",
+                  icon: "Boat",
+                  order: 1,
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
   });
 
-  console.log("✅ Created Nested Booking for User:", booking.id);
+  await prisma.bookingCollaborator.create({
+    data: {
+      bookingId: booking.id,
+      userId: collaborator.id,
+    },
+  });
+
+  await prisma.payment.create({
+    data: {
+      bookingId: booking.id,
+      submittedById: user.id,
+      amount: 10000.0,
+      method: PaymentMethod.GCASH,
+      status: PaymentStatus.PENDING,
+      type: PaymentType.PARTIAL,
+      proofImage: Buffer.from("aGVsbG8=", "base64"),
+      proofMimeType: "image/png",
+      proofSize: Buffer.from("aGVsbG8=", "base64").length,
+      transactionId: "TXN-10001",
+    },
+  });
+
+  const inquiry = await prisma.inquiry.create({
+    data: {
+      userId: user.id,
+      subject: "Visa Requirements",
+      status: InquiryStatus.OPEN,
+      messages: {
+        create: {
+          senderId: user.id,
+          content: "Do we need a visa for this trip?",
+        },
+      },
+    },
+  });
+
+  await prisma.message.create({
+    data: {
+      inquiryId: inquiry.id,
+      senderId: admin.id,
+      content: "We can help with visa guidance. Please share your nationality.",
+    },
+  });
+
+  await prisma.feedback.create({
+    data: {
+      userId: user.id,
+      rating: 5,
+      comment: "Amazing service and smooth booking!",
+      response: "Thank you for the feedback!",
+      respondedById: admin.id,
+      respondedAt: new Date(),
+    },
+  });
+
+  await prisma.activityLog.create({
+    data: {
+      userId: admin.id,
+      action: "SEED",
+      details: "Seeded initial admin activity",
+    },
+  });
+
+  await prisma.notification.create({
+    data: {
+      userId: user.id,
+      type: NotificationType.BOOKING,
+      title: "Booking Draft Saved",
+      message: "Your Boracay booking draft is saved.",
+    },
+  });
+
+  console.log("✅ Created Booking:", booking.id);
+  console.log("✅ Created Collaboration, Payment, Inquiry, Feedback, Activity Log, Notification");
 
   console.log("\n🎉 Database seeding completed!");
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");

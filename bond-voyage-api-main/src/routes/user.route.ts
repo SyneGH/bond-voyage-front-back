@@ -18,6 +18,11 @@ router.post("/", authorize([Role.ADMIN]), asyncHandler(userController.addUser));
 router.get("/", authorize([Role.ADMIN]), asyncHandler(userController.getAllUsers));
 router.get("/:id", authorize([Role.ADMIN]), asyncHandler(userController.getUserById));
 router.patch(
+  "/:id",
+  authorize([Role.ADMIN]),
+  asyncHandler(userController.updateUserById)
+);
+router.patch(
   "/:id/deactivate",
   authorize([Role.ADMIN]),
   asyncHandler(userController.deactivateUser)

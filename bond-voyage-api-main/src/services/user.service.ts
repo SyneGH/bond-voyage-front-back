@@ -3,6 +3,7 @@ import { User, Prisma } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { BCRYPT_SALT_ROUNDS } from "@/constants/constants";
 import { RegisterDto, UserUpdateDto } from "@/types";
+import { logActivity } from "./activity-log.service";
 
 export class UserService {
   async findByEmail(email: string): Promise<User | null> {
@@ -79,6 +80,20 @@ export class UserService {
     });
   }
 
+  public async createWithLog(
+    actorId: string,
+    data: RegisterDto
+  ): Promise<User> {
+    const user = await this.create(data);
+    await logActivity(
+      prisma,
+      actorId,
+      "Created User",
+      `Created user ${user.email}`
+    );
+    return user;
+  }
+
   async findMany(params: {
     skip?: number;
     take?: number;
@@ -99,11 +114,44 @@ export class UserService {
     });
   }
 
+  async updateByIdWithLog(
+    actorId: string,
+    id: string,
+    data: Partial<User>
+  ): Promise<User | null> {
+    const user = await this.updateById(id, data);
+    if (user) {
+      await logActivity(
+        prisma,
+        actorId,
+        "Updated User",
+        `Updated user ${id}`
+      );
+    }
+    return user;
+  }
+
   async updateProfile(id: string, data: UserUpdateDto): Promise<User | null> {
     return prisma.user.update({
       where: { id },
       data,
     });
+  }
+
+  async updateProfileWithLog(
+    userId: string,
+    data: UserUpdateDto
+  ): Promise<User | null> {
+    const user = await this.updateProfile(userId, data);
+    if (user) {
+      await logActivity(
+        prisma,
+        userId,
+        "Updated Profile",
+        `Updated profile for user ${userId}`
+      );
+    }
+    return user;
   }
 
   async addRefreshToken(userId: string, refreshToken: string): Promise<User> {
@@ -166,10 +214,32 @@ export class UserService {
     });
   }
 
+  async deactivateWithLog(actorId: string, id: string): Promise<User> {
+    const user = await this.deactivate(id);
+    await logActivity(
+      prisma,
+      actorId,
+      "Deactivated User",
+      `Deactivated user ${id}`
+    );
+    return user;
+  }
+
   async delete(id: string): Promise<User> {
     return prisma.user.delete({
       where: { id },
     });
+  }
+
+  async deleteWithLog(actorId: string, id: string): Promise<User> {
+    const user = await this.delete(id);
+    await logActivity(
+      prisma,
+      actorId,
+      "Deleted User",
+      `Deleted user ${id}`
+    );
+    return user;
   }
 
   async comparePassword(
