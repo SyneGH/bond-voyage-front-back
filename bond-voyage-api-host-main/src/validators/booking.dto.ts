@@ -51,6 +51,54 @@ const itineraryDayDto = z.object({
   activities: z.array(activityDto).min(0),
 });
 
+
+const tourTypeSchema = z.preprocess(
+  (value) => {
+    if (typeof value === "string" && value.toUpperCase() === "GROUP") {
+      return "JOINER";
+    }
+    return value;
+  },
+  z.enum(["JOINER", "PRIVATE"])
+);
+
+const optionalDateSchema = z.preprocess((value) => {
+  if (value === null || value === undefined || value === "") {
+    return undefined;
+  }
+  if (value instanceof Date) {
+    return value;
+  }
+  if (typeof value === "string" || typeof value === "number") {
+    return new Date(value);
+  }
+  return value;
+}, z.date().optional());
+
+const updateDayDto = z.object({
+  dayNumber: z.number().int().min(1),
+  title: z.string().optional().nullable(),
+  date: optionalDateSchema.optional().nullable(),
+  activities: z.array(activityDto).optional(),
+});
+
+const itineraryActivityWithDayDto = activityDto.extend({
+  dayNumber: z.number().int().min(1),
+});
+
+const itineraryWrapperDto = z.object({
+  title: z.string().optional().nullable(),
+  destination: z.string().optional(),
+  startDate: optionalDateSchema.optional().nullable(),
+  endDate: optionalDateSchema.optional().nullable(),
+  travelers: z.number().int().min(1).optional(),
+  type: z.enum(["STANDARD", "CUSTOMIZED", "REQUESTED"]).optional(),
+  tourType: tourTypeSchema.optional(),
+  totalDays: z.number().int().min(1).optional(),
+  days: z.array(updateDayDto).optional(),
+  activities: z.array(itineraryActivityWithDayDto).optional(),
+});
+
 const versionNumberSchema = z.preprocess((val) => {
   const num = Number(val);
   return Number.isNaN(num) ? val : num;
@@ -64,7 +112,7 @@ const inlineItineraryDto = z
     endDate: dateSchema.optional().nullable(),
     travelers: z.number().int().min(1),
     type: z.enum(["STANDARD", "CUSTOMIZED", "REQUESTED"]).optional(),
-    tourType: z.enum(["JOINER", "PRIVATE"]).optional(),
+    tourType: tourTypeSchema.optional(),
     days: z.array(itineraryDayDto).optional(),
   })
   .refine((data) => {
@@ -85,7 +133,7 @@ export const createBookingDto = z
     itinerary: inlineItineraryDto.optional(),
     totalPrice: z.number().min(0),
     type: z.enum(["STANDARD", "CUSTOMIZED", "REQUESTED"]).optional(),
-    tourType: z.enum(["JOINER", "PRIVATE"]).optional(),
+    tourType: tourTypeSchema.optional(),
 
     itineraryType: z
       .enum(["STANDARD", "CUSTOMIZED", "REQUESTED", "SMART_TRIP"])
@@ -167,20 +215,44 @@ export const createBookingDto = z
   });
 
 export const updateItineraryDto = z
-.object({
+  .object({
     customerName: z.string().min(1, "Customer name is required").optional(),
     customerEmail: z.string().email("Invalid email address").optional(),
     customerMobile: z.string().min(1, "Customer mobile number is required").optional(),
-    destination: z.string().min(1),
-    startDate: dateSchema,
-    endDate: dateSchema,
-    travelers: z.number().int().min(1),
-    totalPrice: z.number().min(0),
+    destination: z.string().min(1).optional(),
+    startDate: optionalDateSchema.optional().nullable(),
+    endDate: optionalDateSchema.optional().nullable(),
+    travelers: z.number().int().min(1).optional(),
+    totalPrice: z.number().min(0).optional(),
     userBudget: z.number().min(0).optional(),
-    itinerary: z.array(itineraryDayDto).min(0),
-    version: versionNumberSchema,
+    type: z.enum(["STANDARD", "CUSTOMIZED", "REQUESTED"]).optional(),
+    status: z.enum([
+      "DRAFT",
+      "PENDING",
+      "CONFIRMED",
+      "REJECTED",
+      "COMPLETED",
+      "CANCELLED",
+    ]).optional(),
+    tourType: tourTypeSchema.optional(),
+    isResolved: z.boolean().optional(),
+    rejectionReason: z.string().optional().nullable(),
+    rejectionResolution: z.string().optional().nullable(),
+    itinerary: z
+      .union([
+        z.array(updateDayDto),
+        itineraryWrapperDto,
+        z.array(itineraryWrapperDto),
+      ])
+      .optional(),
+    version: versionNumberSchema.optional(),
   })
-  .refine((data) => data.endDate >= data.startDate, {
+  .refine((data) => {
+    if (data.startDate && data.endDate) {
+      return data.endDate >= data.startDate;
+    }
+    return true;
+  }, {
     message: "End date must be on or after start date",
     path: ["endDate"],
   });

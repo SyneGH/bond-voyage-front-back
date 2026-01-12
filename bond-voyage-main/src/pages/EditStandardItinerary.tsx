@@ -34,6 +34,10 @@ import {
   useTourPackageDetail,
   useUpdateTourPackage,
 } from "../hooks/useTourPackages";
+import { useDebounce } from "../hooks/useDebounce";
+import { usePlacesSearch } from "../hooks/useLocations";
+import { Place } from "../types/types";
+import { RouteOptimizationPanel } from "../components/RouteOptimizationPanel";
 import {
   ICON_OPTIONS,
   PHILIPPINE_LOCATIONS,
@@ -52,6 +56,7 @@ interface Activity {
   title: string;
   description: string;
   location: string;
+  locationData?: Place;
   order: number;
 }
 
@@ -118,6 +123,30 @@ export function EditStandardItinerary() {
   const [pendingDaysChange, setPendingDaysChange] = useState<number | null>(
     null
   );
+
+  // Location autocomplete states
+  const [locationSearchQuery, setLocationSearchQuery] = useState("");
+  const debouncedValue = useDebounce(locationSearchQuery);
+
+  // Route Optimization state
+  const [selectedDayForRoute, setSelectedDayForRoute] = useState<string | null>(
+    null
+  );
+
+  const { data: placesData, isLoading: isLoadingPlaces } = usePlacesSearch(
+    debouncedValue.length >= 2
+      ? {
+          text: debouncedValue,
+          limit: 10,
+        }
+      : undefined,
+    {
+      enabled: debouncedValue.length >= 2,
+      queryKey: queryKeys.places.search(debouncedValue),
+    }
+  );
+
+  const placesSuggestions = placesData?.data || [];
 
   const [locationSuggestions, setLocationSuggestions] = useState<string[]>([]);
   const [activeLocationInput, setActiveLocationInput] = useState<{
@@ -327,7 +356,7 @@ export function EditStandardItinerary() {
     dayId: string,
     activityId: string,
     field: keyof Activity,
-    value: string
+    value: string | Place
   ) => {
     if (field === "time" && value) {
       const day = itineraryDays.find((d) => d.id === dayId);
@@ -423,10 +452,13 @@ export function EditStandardItinerary() {
     dayId: string,
     activityId: string
   ) => {
+    updateActivity(dayId, activityId, "location", searchTerm);
+    setLocationSearchQuery(searchTerm);
     if (searchTerm.length >= 2) {
       const filtered = PHILIPPINE_LOCATIONS.filter((location) =>
         location.toLowerCase().includes(searchTerm.toLowerCase())
       );
+      // show quick local suggestions while places API resolves
       setLocationSuggestions(filtered.slice(0, 5));
       setActiveLocationInput({ dayId, activityId });
     } else {
@@ -436,13 +468,43 @@ export function EditStandardItinerary() {
   };
 
   const selectLocationSuggestion = (
-    location: string,
+    placeOrName: Place | string,
     dayId: string,
     activityId: string
   ) => {
-    updateActivity(dayId, activityId, "location", location);
+    if (typeof placeOrName === "string") {
+      updateActivity(dayId, activityId, "location", placeOrName);
+    } else {
+      updateActivity(dayId, activityId, "location", placeOrName.name);
+      updateActivity(dayId, activityId, "locationData", placeOrName);
+    }
     setLocationSuggestions([]);
     setActiveLocationInput(null);
+  };
+
+  const handleAcceptOptimization = (
+    dayId: string,
+    optimizedActivities: Activity[]
+  ) => {
+    setItineraryDays((prev) =>
+      prev.map((day) =>
+        day.id === dayId
+          ? {
+              ...day,
+              activities: optimizedActivities.map((activity, index) => ({
+                ...activity,
+                order: index,
+              })),
+            }
+          : day
+      )
+    );
+    toast.success("Route Optimized", {
+      description: `Activities for Day ${
+        dayId.split("-")[1]
+      } have been reordered for optimal routing.`,
+    });
+    setHasUnsavedChanges(true);
   };
 
   const validateForm = () => {
@@ -595,6 +657,34 @@ export function EditStandardItinerary() {
             </div>
           </div>
         </ContentCard>
+        {itineraryDays.some((day) => {
+          const validLocations = day.activities.filter(
+            (a) =>
+              a.location &&
+              a.locationData &&
+              typeof a.locationData.lat === "number" &&
+              typeof a.locationData.lng === "number"
+          );
+          return validLocations.length >= 2;
+        }) && (
+          <RouteOptimizationPanel
+            itineraryDays={itineraryDays}
+            selectedDayId={
+              selectedDayForRoute ||
+              itineraryDays.find((d) => {
+                const validLocations = d.activities.filter(
+                  (a) =>
+                    a.location &&
+                    a.locationData &&
+                    typeof a.locationData.lat === "number" &&
+                    typeof a.locationData.lng === "number"
+                );
+                return validLocations.length >= 2;
+              })?.id
+            }
+            onAcceptOptimization={handleAcceptOptimization}
+          />
+        )}
 
         <ContentCard>
           <div className="mb-6">
@@ -900,29 +990,52 @@ export function EditStandardItinerary() {
                                 {activeLocationInput?.dayId === day.id &&
                                   activeLocationInput?.activityId ===
                                     activity.id &&
-                                  locationSuggestions.length > 0 && (
+                                  (placesSuggestions.length > 0 ||
+                                    locationSuggestions.length > 0) && (
                                     <div className="absolute z-10 top-full left-0 right-0 mt-1 bg-white border-2 border-[#E5E7EB] rounded-lg shadow-lg max-h-40 overflow-auto">
-                                      {locationSuggestions.map(
-                                        (suggestion, idx) => (
-                                          <button
-                                            key={idx}
-                                            type="button"
-                                            onClick={() =>
-                                              selectLocationSuggestion(
-                                                suggestion,
-                                                day.id,
-                                                activity.id
-                                              )
-                                            }
-                                            className="w-full px-4 py-2.5 text-left text-sm text-[#334155] hover:bg-[rgba(10,122,255,0.05)] hover:text-[#0A7AFF] transition-colors flex items-center gap-2 border-b border-[#F1F5F9] last:border-0"
-                                          >
-                                            <MapPin className="w-3.5 h-3.5 text-[#0A7AFF] shrink-0" />
-                                            <span className="truncate">
-                                              {suggestion}
-                                            </span>
-                                          </button>
-                                        )
-                                      )}
+                                      {placesSuggestions.length > 0
+                                        ? placesSuggestions.map(
+                                            (place: any, idx: number) => (
+                                              <button
+                                                key={idx}
+                                                type="button"
+                                                onClick={() =>
+                                                  selectLocationSuggestion(
+                                                    place,
+                                                    day.id,
+                                                    activity.id
+                                                  )
+                                                }
+                                                className="w-full px-4 py-2.5 text-left text-sm text-[#334155] hover:bg-[rgba(10,122,255,0.05)] hover:text-[#0A7AFF] transition-colors flex items-center gap-2 border-b border-[#F1F5F9] last:border-0"
+                                              >
+                                                <MapPin className="w-3.5 h-3.5 text-[#0A7AFF] shrink-0" />
+                                                <span className="truncate">
+                                                  {place.name}
+                                                </span>
+                                              </button>
+                                            )
+                                          )
+                                        : locationSuggestions.map(
+                                            (suggestion, idx) => (
+                                              <button
+                                                key={idx}
+                                                type="button"
+                                                onClick={() =>
+                                                  selectLocationSuggestion(
+                                                    suggestion,
+                                                    day.id,
+                                                    activity.id
+                                                  )
+                                                }
+                                                className="w-full px-4 py-2.5 text-left text-sm text-[#334155] hover:bg-[rgba(10,122,255,0.05)] hover:text-[#0A7AFF] transition-colors flex items-center gap-2 border-b border-[#F1F5F9] last:border-0"
+                                              >
+                                                <MapPin className="w-3.5 h-3.5 text-[#0A7AFF] shrink-0" />
+                                                <span className="truncate">
+                                                  {suggestion}
+                                                </span>
+                                              </button>
+                                            )
+                                          )}
                                     </div>
                                   )}
                               </div>

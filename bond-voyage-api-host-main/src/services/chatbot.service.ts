@@ -66,6 +66,303 @@ function extractJson<T>(text: string, fallback: T): T {
   return fallback;
 }
 
+// === ROAMAN TYPES & HELPERS ===
+
+interface RoamanPreferences {
+  destination?: string;
+  startDate?: string;
+  endDate?: string;
+  travelers?: number;
+  tourType?: "JOINER" | "PRIVATE";
+  budget?: number;
+  pace?: string;
+  travelPace?: string;
+  preferences?: string[];
+  selectedDay?: number;
+  currentDayActivities?: any[];
+  totalDays?: number;
+}
+
+interface RoamanActivityOutput {
+  order: number;
+  time: string;
+  title: string;
+  locationName: string;
+  coordinates: { lat: number; lng: number };
+  description: string;
+  iconKey: string;
+}
+
+interface RoamanDayOutput {
+  dayNumber: number;
+  date: string | null;
+  title: string;
+  activities: RoamanActivityOutput[];
+}
+
+interface RoamanDraftOutput {
+  type: "SMART_TRIP";
+  destination: string;
+  startDate: string | null;
+  endDate: string | null;
+  travelers: number;
+  days: RoamanDayOutput[];
+}
+
+interface RoamanResponseData {
+  message: string;
+  draft: RoamanDraftOutput;
+}
+
+function buildRoamanSystemPrompt(
+  officialDestinations: string[],
+  preferences?: RoamanPreferences
+): string {
+  const pace = preferences?.pace || preferences?.travelPace || "moderate";
+  const destination = preferences?.destination || "the Philippines";
+  const travelers = preferences?.travelers || 1;
+  const startDate = preferences?.startDate || null;
+  const endDate = preferences?.endDate || null;
+  const userPrefs = preferences?.preferences || [];
+
+  return `You are **Roaman**, the itinerary generator for the BondVoyage backend.
+
+### Goal
+Generate a **SMART_TRIP itinerary draft** compatible with the booking flow structure. Return ONLY valid JSON—no markdown, explanations, or trailing text.
+
+### Hard Requirements
+1. **Return valid JSON only.**
+2. The response must have this exact shape:
+   { "message": "friendly assistant message", "draft": { ... } }
+
+3. \`draft.type\` MUST be \`"SMART_TRIP"\`.
+4. \`draft.days\` MUST contain **at least 1 day**.
+5. Each day MUST include:
+   - \`dayNumber\` (integer, starting at 1 - NOT "day", use "dayNumber")
+   - \`date\` (string YYYY-MM-DD or null)
+   - \`title\` (string, catchy day title like "Island Hopping Adventure")
+   - \`activities\` (array with at least 4 items)
+6. **Each day MUST contain at least 4 activities**.
+7. Each activity MUST include ALL fields:
+   - \`order\` (integer, sequential starting at 1, resets each day)
+   - \`time\` (string \`HH:MM\` 24-hour)
+   - \`title\` (string, descriptive activity name)
+   - \`locationName\` (string, Geoapify-style: "Place Name, Street, City, Province, Philippines")
+   - \`coordinates\` (object with \`lat\` and \`lng\` as realistic numbers)
+   - \`description\` (string, 1-2 sentences)
+   - \`iconKey\` (one of: sightseeing, food, beach, nature, culture, adventure, shopping, relaxation, transport, museum, cafe, nightlife, hiking)
+
+8. If startDate provided, compute each day's date as startDate + (dayNumber - 1).
+9. If startDate is null, set date: null for each day.
+10. Avoid placeholders like "Airport" or "Hotel" unless explicitly requested.
+11. Activities must be destination-relevant, varied, and time-ordered.
+
+### SCOPE
+You ONLY provide travel advice for: [${officialDestinations.join(", ")}], and any point in the Philippines.
+If asked about destinations outside the Philippines, explain BondVoyage only covers Philippine destinations.
+
+### TONE
+Be warm and enthusiastic. Use phrases like "I've curated a special route!", "This looks incredible!", "I've handpicked my favorite spots."
+
+### Pace Guidelines
+| Pace | Activities/Day |
+|------|----------------|
+| relaxed | 4 |
+| moderate | 4-5 |
+| packed | 5-7 |
+| own_pace | 4-5 |
+
+### Current Context
+- Destination: ${destination}
+- Start Date: ${startDate || "Not specified"}
+- End Date: ${endDate || "Not specified"}
+- Travelers: ${travelers}
+- Pace: ${pace}
+- Preferences: ${userPrefs.length > 0 ? userPrefs.join(", ") : "General sightseeing"}
+
+### Example Output Structure
+{
+  "message": "I've curated a special route for your Cebu adventure!",
+  "draft": {
+    "type": "SMART_TRIP",
+    "destination": "Cebu",
+    "startDate": "2025-03-01",
+    "endDate": "2025-03-03",
+    "travelers": 2,
+    "days": [
+      {
+        "dayNumber": 1,
+        "date": "2025-03-01",
+        "title": "Cebu City Historical Tour",
+        "activities": [
+          {
+            "order": 1,
+            "time": "09:00",
+            "title": "Visit Magellan's Cross",
+            "locationName": "Magellan's Cross, P. Burgos St, Cebu City, Cebu, Philippines",
+            "coordinates": { "lat": 10.2934, "lng": 123.9021 },
+            "description": "Start your day at this historic landmark marking Magellan's arrival in 1521.",
+            "iconKey": "culture"
+          }
+        ]
+      }
+    ]
+  }
+}`;
+}
+
+function buildRoamanFallback(preferences?: RoamanPreferences): RoamanResponseData {
+  const destination = preferences?.destination || "Cebu";
+  const travelers = preferences?.travelers || 1;
+  const startDate = preferences?.startDate || null;
+  
+  const dayDate = startDate || null;
+  const endDate = startDate || null;
+
+  // Base coordinates for Cebu (default)
+  const baseCoords = { lat: 10.3157, lng: 123.8854 };
+
+  return {
+    message: "I've put together a starter draft for your BondVoyage adventure! Feel free to customize it to your liking.",
+    draft: {
+      type: "SMART_TRIP",
+      destination,
+      startDate,
+      endDate,
+      travelers,
+      days: [
+        {
+          dayNumber: 1,
+          date: dayDate,
+          title: `${destination} Highlights`,
+          activities: [
+            {
+              order: 1,
+              time: "09:00",
+              title: "Morning City Exploration",
+              locationName: `City Center, ${destination}, Philippines`,
+              coordinates: { lat: baseCoords.lat + 0.001, lng: baseCoords.lng + 0.001 },
+              description: "Start your day exploring the heart of the city and its local attractions.",
+              iconKey: "sightseeing",
+            },
+            {
+              order: 2,
+              time: "12:00",
+              title: "Local Cuisine Experience",
+              locationName: `Local Restaurant, ${destination}, Philippines`,
+              coordinates: { lat: baseCoords.lat + 0.002, lng: baseCoords.lng - 0.001 },
+              description: "Enjoy authentic local dishes and experience the regional flavors.",
+              iconKey: "food",
+            },
+            {
+              order: 3,
+              time: "14:30",
+              title: "Cultural Heritage Visit",
+              locationName: `Heritage Site, ${destination}, Philippines`,
+              coordinates: { lat: baseCoords.lat - 0.001, lng: baseCoords.lng + 0.002 },
+              description: "Discover the rich cultural heritage and history of the area.",
+              iconKey: "culture",
+            },
+            {
+              order: 4,
+              time: "17:00",
+              title: "Sunset & Evening Leisure",
+              locationName: `Waterfront Area, ${destination}, Philippines`,
+              coordinates: { lat: baseCoords.lat + 0.003, lng: baseCoords.lng + 0.003 },
+              description: "Relax and enjoy the sunset views before dinner.",
+              iconKey: "relaxation",
+            },
+          ],
+        },
+      ],
+    },
+  };
+}
+
+// === POST-PROCESSING FOR ROAMAN ===
+
+function normalizeRoamanResponse(
+  raw: any,
+  preferences?: RoamanPreferences
+): RoamanResponseData {
+  const destination = preferences?.destination || raw?.draft?.destination || "Philippines";
+  const travelers = preferences?.travelers || raw?.draft?.travelers || 1;
+  const startDate = preferences?.startDate || raw?.draft?.startDate || null;
+  const endDate = preferences?.endDate || raw?.draft?.endDate || null;
+
+  // Default message if missing
+  const message = raw?.message || "I've put together an itinerary for your adventure!";
+
+  // Normalize days array
+  const rawDays = raw?.draft?.days || [];
+  const normalizedDays: RoamanDayOutput[] = rawDays.map((day: any, dayIndex: number) => {
+    // Handle both 'day' and 'dayNumber' field names
+    const dayNumber = day.dayNumber || day.day || dayIndex + 1;
+    
+    // Calculate date if startDate is provided
+    let date: string | null = null;
+    if (startDate) {
+      const d = new Date(startDate);
+      d.setDate(d.getDate() + dayIndex);
+      date = d.toISOString().split("T")[0];
+    } else {
+      date = day.date || null;
+    }
+
+    // Generate day title if missing
+    const title = day.title || `Day ${dayNumber}: ${destination} Adventure`;
+
+    // Normalize activities
+    const activities: RoamanActivityOutput[] = (day.activities || []).map((act: any, actIndex: number) => {
+      // Fix malformed coordinates (Gemini sometimes outputs wrong keys)
+      let lat = act.coordinates?.lat ?? act.lat ?? 10.3157;
+      let lng = act.coordinates?.lng ?? act.lng ?? 123.8854;
+
+      // Handle case where Gemini outputs numeric keys like "2" instead of "lng"
+      if (act.coordinates && typeof act.coordinates === "object") {
+        const coordKeys = Object.keys(act.coordinates);
+        for (const key of coordKeys) {
+          if (key === "lat") lat = act.coordinates[key];
+          else if (key === "lng") lng = act.coordinates[key];
+          else if (!isNaN(Number(key)) || key === "lon" || key === "long") {
+            // Numeric key or alternate lng name - assume it's longitude
+            lng = act.coordinates[key];
+          }
+        }
+      }
+
+      return {
+        order: act.order || actIndex + 1,
+        time: act.time || "09:00",
+        title: act.title || "Activity",
+        locationName: act.locationName || act.location || `${destination}, Philippines`,
+        coordinates: { lat: Number(lat), lng: Number(lng) },
+        description: act.description || "Explore this location.",
+        iconKey: act.iconKey || "sightseeing",
+      };
+    });
+
+    return {
+      dayNumber,
+      date,
+      title,
+      activities,
+    };
+  });
+
+  return {
+    message,
+    draft: {
+      type: "SMART_TRIP",
+      destination,
+      startDate,
+      endDate,
+      travelers,
+      days: normalizedDays,
+    },
+  };
+}
+
 // NEW: Helper function to determine actions based on user query
 function determineActions(question: string): ChatAction[] {
   const lowerQ = question.toLowerCase();
@@ -204,57 +501,29 @@ export const ChatbotService = {
     };
   },
 
-  async roaman(prompt: string, preferences?: any) {
-    // Define your company's official destinations here
-    const officialDestinations = ["Cebu", "Palawan", "Bohol", "Siargao", "Bicol", "Baguio", "Ilocos", "Baguio"];
-
-    const contextLines: string[] = [
-      "You are Roaman, the professional and enthusiastic travel assistant for BondVoyage.",
-      `SCOPE: You ONLY provide travel advice and itineraries for: [${officialDestinations.join(", ")}], and any point in the Philippines.`,
-      "If a user asks about a destination outside this list, politely explain that we currently only service these specific areas.",
-      "TONE: Be warm, professional, and slightly excited. Don't just say 'I generated this.'",
-      "PERSONALIZATION: Use phrases like 'I've curated a special route just for you!', 'This looks like an incredible journey!', or 'I've handpicked some of my favorite spots in the area.'",
-      "STRUCTURE: Return a friendly 'message' and a valid JSON 'draft' for a SMART_TRIP itinerary.",
-      "CONTENT: For every day in the itinerary, you MUST provide at least 3 detailed activities with 'time', 'title', and 'location'.",
-      "Return JSON with keys: 'message' (string) and 'draft' (object).",
-      "Draft must include: type='SMART_TRIP', destination, travelers, and days[].",
-      "If unsure about dates, set them to null and keep dayNumber ordering starting at 1."
+  async roaman(prompt: string, preferences?: RoamanPreferences): Promise<RoamanResponseData> {
+    const officialDestinations = [
+      "Cebu", "Palawan", "Bohol", "Siargao", "Bicol",
+      "Baguio", "Ilocos", "Boracay", "Davao", "Manila"
     ];
 
-    if (preferences) {
-      contextLines.push(`User preferences: ${JSON.stringify(preferences)}`);
+    const systemPrompt = buildRoamanSystemPrompt(officialDestinations, preferences);
+    const fullPrompt = `${systemPrompt}\n\nUser request: ${prompt}\n\nReturn JSON only.`;
+
+    try {
+      const text = await callGemini(fullPrompt);
+      const rawResponse = extractJson<any>(text, {});
+      
+      if (!rawResponse || !rawResponse.draft?.days?.length) {
+        // Fallback if Gemini returns invalid/empty response
+        return buildRoamanFallback(preferences);
+      }
+
+      // Normalize the response to fix Gemini inconsistencies
+      return normalizeRoamanResponse(rawResponse, preferences);
+    } catch (error) {
+      console.error("Roaman generation failed:", error);
+      return buildRoamanFallback(preferences);
     }
-
-    const fullPrompt = `
-    ${contextLines.join("\n")}
-    User prompt: ${prompt}
-    Respond ONLY with a valid JSON object matching the format: {"message":"string", "draft":{...}}. 
-    Do not wrap in markdown code blocks.`;
-    
-    const text = await callGemini(fullPrompt);
-
-    const fallbackDraft = {
-      message: "I've put together a starter draft for your Bond Voyage adventure!",
-      draft: {
-        type: "SMART_TRIP",
-        destination: preferences?.destination || "Your Destination",
-        startDate: preferences?.startDate || null,
-        endDate: preferences?.endDate || null,
-        travelers: preferences?.travelers || 1,
-        days: [
-          {
-            dayNumber: 1,
-            date: null,
-            activities: [
-              { time: "09:00", title: "Arrival & Welcome", location: "Airport/Terminal", order: 1 },
-              { time: "12:00", title: "Local Lunch", location: "City Center", order: 2 },
-              { time: "15:00", title: "Check-in & Relaxation", location: "Hotel", order: 3 }
-            ],
-          },
-        ],
-      },
-    };
-
-    return extractJson(text, fallbackDraft);
   },
 };

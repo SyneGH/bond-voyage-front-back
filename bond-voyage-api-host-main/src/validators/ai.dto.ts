@@ -101,6 +101,7 @@ export const aiItineraryDto = z
     endDate: dateSchema,
     travelers: z.number().optional(),
     budget: z.number().optional(),
+    travelPace: z.enum(SMART_TRIP_TRAVEL_PACES).optional(),
     preferences: z.array(z.string()).optional(),
   })
   // 2. Explicitly type the data argument to fix 'unknown' errors
@@ -116,3 +117,4 @@ export const aiItineraryDto = z
 export const iconWhitelist = SMART_TRIP_ICON_KEYS;
 export const travelPaceOptions = SMART_TRIP_TRAVEL_PACES;
 export type SmartTripRequest = z.infer<typeof smartTripGenerateDto>;
+export type AiItineraryInput = z.infer<typeof aiItineraryDto>;

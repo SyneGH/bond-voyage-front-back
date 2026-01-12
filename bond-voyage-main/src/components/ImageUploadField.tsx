@@ -18,10 +18,28 @@ export function ImageUploadField({ value, onChange, label = "Cover Image", requi
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      // Create a temporary URL for preview
-      const fileUrl = URL.createObjectURL(file);
-      onChange(fileUrl);
-      // In a real app, you would upload the file to a server here
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        // You can use a toast notification here if available
+        console.error("File size must be less than 5MB");
+        return;
+      }
+
+      // Validate file type
+      if (!file.type.startsWith("image/")) {
+        console.error("Please upload an image file");
+        return;
+      }
+
+      // Convert file to base64 data URI
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        onChange(reader.result as string);
+      };
+      reader.onerror = () => {
+        console.error("Failed to read file");
+      };
+      reader.readAsDataURL(file);
     }
   };
 

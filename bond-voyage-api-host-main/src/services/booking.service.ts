@@ -195,13 +195,21 @@ interface UpdateBookingItineraryDTO {
   customerName?: string;
   customerEmail?: string;
   customerMobile?: string;
-  destination: string;
-  startDate: Date;
-  endDate: Date;
-  travelers: number;
-  totalPrice: number;
+  destination?: string;
+  startDate?: Date | null | undefined;
+  endDate?: Date | null | undefined;
+  travelers?: number;
+  totalPrice?: number;
   userBudget?: number;
-  version: number;
+  version?: number;
+  type?: BookingType;
+  status?: BookingStatus;
+  tourType?: TourType;
+  isResolved?: boolean;
+  rejectionReason?: string | null;
+  rejectionResolution?: string | null;
+  itinerary?: unknown;
+  /*
   itinerary: {
     dayNumber: number;
     title?: string | null;
@@ -215,7 +223,125 @@ interface UpdateBookingItineraryDTO {
       order: number;
     }[];
   }[];
+  */
 }
+
+const normalizeTourType = (value?: string | null): TourType | undefined => {
+  if (!value) return undefined;
+  const normalized = value.toUpperCase();
+  if (normalized === "GROUP") return TourType.JOINER;
+  if (normalized === "JOINER") return TourType.JOINER;
+  if (normalized === "PRIVATE") return TourType.PRIVATE;
+  return undefined;
+};
+
+const normalizeDate = (value?: string | Date | null): Date | undefined => {
+  if (!value) return undefined;
+  if (value instanceof Date) return value;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return undefined;
+  return date;
+};
+
+type NormalizedItineraryDay = {
+  dayNumber: number;
+  title?: string | null;
+  date?: Date | null;
+  activities: {
+    time: string;
+    title: string;
+    description?: string | null;
+    location?: string | null;
+    icon?: string | null;
+    order: number;
+  }[];
+};
+
+const normalizeItineraryPayload = (
+  payload?: any
+): {
+  days?: NormalizedItineraryDay[];
+  destination?: string;
+  travelers?: number;
+  startDate?: Date | undefined;
+  endDate?: Date | undefined;
+  tourType?: TourType | undefined;
+  type?: ItineraryType | undefined;
+} => {
+  if (!payload) return {};
+
+  const buildDays = (days: any[], activities?: any[]) => {
+    const activityByDay = new Map<number, any[]>();
+    if (activities) {
+      for (const activity of activities) {
+        if (!activity?.dayNumber) continue;
+        const list = activityByDay.get(activity.dayNumber) ?? [];
+        list.push({
+          time: activity.time ?? "00:00",
+          title: activity.title ?? "Activity",
+          description: activity.description ?? null,
+          location: activity.location ?? null,
+          icon: activity.icon ?? null,
+          order: activity.order ?? 0,
+        });
+        activityByDay.set(activity.dayNumber, list);
+      }
+    }
+
+    return days.map((day: any) => ({
+      dayNumber: day.dayNumber,
+      title: day.title ?? null,
+      date: normalizeDate(day.date),
+      activities:
+        day.activities?.map((activity: any) => ({
+          time: activity.time ?? "00:00",
+          title: activity.title ?? "Activity",
+          description: activity.description ?? null,
+          location: activity.location ?? null,
+          icon: activity.icon ?? null,
+          order: activity.order ?? 0,
+        })) ?? activityByDay.get(day.dayNumber) ?? [],
+    }));
+  };
+
+  if (Array.isArray(payload)) {
+    const looksLikeDayArray = payload.every(
+      (item) => typeof item?.dayNumber === "number"
+    );
+    if (looksLikeDayArray) {
+      return { days: buildDays(payload) };
+    }
+
+    const itineraryWrapper = payload[0];
+    if (itineraryWrapper) {
+      return {
+        days: itineraryWrapper.days
+          ? buildDays(itineraryWrapper.days, itineraryWrapper.activities)
+          : undefined,
+        destination: itineraryWrapper.destination,
+        travelers: itineraryWrapper.travelers,
+        startDate: normalizeDate(itineraryWrapper.startDate),
+        endDate: normalizeDate(itineraryWrapper.endDate),
+        tourType: normalizeTourType(itineraryWrapper.tourType),
+        type: itineraryWrapper.type as ItineraryType | undefined,
+      };
+    }
+  }
+
+  if (payload.days) {
+    return {
+      days: buildDays(payload.days, payload.activities),
+      destination: payload.destination,
+      travelers: payload.travelers,
+      startDate: normalizeDate(payload.startDate),
+      endDate: normalizeDate(payload.endDate),
+      tourType: normalizeTourType(payload.tourType),
+      type: payload.type as ItineraryType | undefined,
+    };
+  }
+
+  return {};
+};
 
 export const BookingService = {
   async createBooking(data: CreateBookingDTO) {
@@ -699,7 +825,8 @@ export const BookingService = {
   async updateItinerary(
     bookingId: string,
     userId: string,
-    data: UpdateBookingItineraryDTO
+    data: UpdateBookingItineraryDTO,
+    actorRole?: string
   ) {
     return prisma.$transaction(async (tx) => {
       const booking = await tx.booking.findUnique({
@@ -713,53 +840,105 @@ export const BookingService = {
 
       if (!booking) throw new Error("BOOKING_NOT_FOUND");
 
+      const isAdmin = actorRole === Role.ADMIN;
       const isOwner = booking.userId === userId;
       const isCollaborator = booking.itinerary.collaborators.some(
         (collab) => collab.userId === userId
       );
 
-      if (!isOwner && !isCollaborator) {
+      if (!isAdmin && !isOwner && !isCollaborator) {
         throw new Error("BOOKING_FORBIDDEN");
       }
 
-      if (isCollaborator && booking.status !== "DRAFT") {
+      if (!isAdmin && isCollaborator && booking.status !== "DRAFT") {
         throw new Error("BOOKING_COLLABORATOR_NOT_ALLOWED");
       }
 
-      if (isOwner && !["DRAFT", "PENDING", "REJECTED"].includes(booking.status)) {
+      if (
+        !isAdmin &&
+        isOwner &&
+        !["DRAFT", "PENDING", "REJECTED"].includes(booking.status)
+      ) {
         throw new Error("BOOKING_NOT_EDITABLE");
       }
 
-      const destination = data.destination ?? booking.destination ?? undefined;
-      const travelers = data.travelers ?? booking.travelers ?? undefined;
+      const normalizedItinerary = normalizeItineraryPayload(data.itinerary);
+      const destination =
+        data.destination ??
+        normalizedItinerary.destination ??
+        booking.destination ??
+        undefined;
+      const travelers =
+        data.travelers ??
+        normalizedItinerary.travelers ??
+        booking.travelers ??
+        undefined;
+      const startDate =
+        normalizeDate(data.startDate ?? undefined) ??
+        normalizedItinerary.startDate ??
+        booking.startDate ??
+        undefined;
+      const endDate =
+        normalizeDate(data.endDate ?? undefined) ??
+        normalizedItinerary.endDate ??
+        booking.endDate ??
+        undefined;
 
-      const itineraryUpdateResult = await tx.itinerary.updateMany({
-        where: { id: booking.itineraryId, version: data.version },
-        data: {
-          destination: data.destination,
-          startDate: data.startDate,
-          endDate: data.endDate,
-          travelers: data.travelers,
-          version: { increment: 1 },
-        },
-      });
+      const tourType =
+        data.tourType ??
+        normalizedItinerary.tourType ??
+        booking.tourType ??
+        undefined;
 
-      if (itineraryUpdateResult.count === 0) {
-        throw new Error("ITINERARY_VERSION_CONFLICT");
-      }
+      const itineraryData = normalizedItinerary.days;
 
-      await tx.itineraryDay.deleteMany({ where: { itineraryId: booking.itineraryId } });
+      if (itineraryData) {
+        if (data.version) {
+          const itineraryUpdateResult = await tx.itinerary.updateMany({
+            where: { id: booking.itineraryId, version: data.version },
+            data: {
+              destination,
+              startDate,
+              endDate,
+              travelers,
+              type: normalizedItinerary.type ?? undefined,
+              tourType,
+              version: { increment: 1 },
+            },
+          });
 
-      for (const day of data.itinerary) {
-        await tx.itineraryDay.create({
-          data: {
-            itineraryId: booking.itineraryId,
-            dayNumber: day.dayNumber,
-            title: day.title ?? undefined,
-            date: day.date ?? undefined,
-            activities: { create: day.activities },
-          },
+          if (itineraryUpdateResult.count === 0) {
+            throw new Error("ITINERARY_VERSION_CONFLICT");
+          }
+        } else {
+          await tx.itinerary.update({
+            where: { id: booking.itineraryId },
+            data: {
+              destination,
+              startDate,
+              endDate,
+              travelers,
+              type: normalizedItinerary.type ?? undefined,
+              tourType,
+            },
+          });
+        }
+
+        await tx.itineraryDay.deleteMany({
+          where: { itineraryId: booking.itineraryId },
         });
+
+        for (const day of itineraryData) {
+          await tx.itineraryDay.create({
+            data: {
+              itineraryId: booking.itineraryId,
+              dayNumber: day.dayNumber,
+              title: day.title ?? undefined,
+              date: day.date ?? undefined,
+              activities: { create: day.activities ?? [] },
+            },
+          });
+        }
       }
 
       const refreshedItinerary = await tx.itinerary.findUnique({
@@ -781,12 +960,23 @@ export const BookingService = {
       const updated = await tx.booking.update({
         where: { id: bookingId },
         data: {
-          destination: data.destination,
-          startDate: data.startDate,
-          endDate: data.endDate,
-          travelers: data.travelers,
-          totalPrice: data.totalPrice as unknown as Prisma.Decimal,
-          isResolved: false,
+          ...(destination !== undefined && { destination }),
+          ...(startDate !== undefined && { startDate }),
+          ...(endDate !== undefined && { endDate }),
+          ...(travelers !== undefined && { travelers }),
+          ...(data.totalPrice !== undefined && {
+            totalPrice: data.totalPrice as unknown as Prisma.Decimal,
+          }),
+          ...(data.type !== undefined && { type: data.type }),
+          ...(data.status !== undefined && { status: data.status }),
+          ...(tourType !== undefined && { tourType }),
+          ...(data.isResolved !== undefined && { isResolved: data.isResolved }),
+          ...(data.rejectionReason !== undefined && {
+            rejectionReason: data.rejectionReason,
+          }),
+          ...(data.rejectionResolution !== undefined && {
+            rejectionResolution: data.rejectionResolution,
+          }),
           ...(data.userBudget !== undefined && {
             userBudget: data.userBudget as unknown as Prisma.Decimal,
           }),

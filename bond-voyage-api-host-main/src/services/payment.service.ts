@@ -100,7 +100,8 @@ export const PaymentService = {
   async updatePaymentStatus(
     paymentId: string,
     status: "VERIFIED" | "REJECTED",
-    actorUserId?: string
+    actorUserId?: string,
+    rejectionReason?: string
   ) {
     return prisma.$transaction(async (tx) => {
       const payment = await tx.payment.findUnique({
@@ -110,7 +111,13 @@ export const PaymentService = {
 
       if (!payment) throw new Error("PAYMENT_NOT_FOUND");
 
-      const updated = await tx.payment.update({ where: { id: paymentId }, data: { status } });
+      const updated = await tx.payment.update({
+        where: { id: paymentId },
+        data: {
+          status,
+          rejectionReason: status === "REJECTED" ? rejectionReason ?? null : null,
+        },
+      });
 
       if (actorUserId) {
         await logAudit(tx, {
@@ -122,6 +129,7 @@ export const PaymentService = {
             bookingId: payment.booking.id,
             bookingCode: payment.booking.bookingCode,
             status,
+            rejectionReason: rejectionReason ?? undefined,
           },
           message: `Payment ${payment.id} marked as ${status}`,
         });
@@ -188,6 +196,7 @@ export const PaymentService = {
           amount: true,
           method: true,
           status: true,
+          rejectionReason: true,
           type: true,
           transactionId: true,
           createdAt: true,

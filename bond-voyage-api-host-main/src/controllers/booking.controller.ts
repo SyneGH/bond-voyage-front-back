@@ -126,7 +126,12 @@ export const BookingController = {
 
       const authUser = requireAuthUser(req);
 
-      await BookingService.updateItinerary(id, authUser.userId, payload);
+      await BookingService.updateItinerary(
+        id,
+        authUser.userId,
+        payload,
+        authUser.role
+      );
 
       const updated = await BookingService.getBookingById(id);
       createResponse(res, HTTP_STATUS.OK, "Booking updated", updated);

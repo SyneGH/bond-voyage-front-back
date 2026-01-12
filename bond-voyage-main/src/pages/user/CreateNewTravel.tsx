@@ -81,6 +81,11 @@ import {
   Search,
 } from "lucide-react";
 import { useProfile } from "../../hooks/useAuth";
+import { useDebounce } from "../../hooks/useDebounce";
+import { usePlacesSearch } from "../../hooks/useLocations";
+import { Place } from "../../types/types";
+import { RouteOptimizationPanel } from "../../components/RouteOptimizationPanel";
+import { queryKeys } from "../../utils/lib/queryKeys";
 
 interface Activity {
   id: string;
@@ -89,6 +94,7 @@ interface Activity {
   title: string;
   description: string;
   location: string;
+  locationData?: Place;
 }
 
 interface Day {
@@ -166,43 +172,6 @@ const ICON_OPTIONS = [
 ];
 
 // Philippine cities/destinations for autocomplete suggestions
-const PHILIPPINE_LOCATIONS = [
-  "Boracay, Aklan",
-  "Caticlan Airport, Malay, Aklan",
-  "White Beach, Boracay",
-  "D'Mall, Boracay",
-  "Manila, Metro Manila",
-  "Makati, Metro Manila",
-  "BGC, Taguig City",
-  "Intramuros, Manila",
-  "Rizal Park, Manila",
-  "Palawan",
-  "El Nido, Palawan",
-  "Coron, Palawan",
-  "Puerto Princesa, Palawan",
-  "Underground River, Palawan",
-  "Cebu City, Cebu",
-  "Mactan Island, Cebu",
-  "Oslob, Cebu",
-  "Moalboal, Cebu",
-  "Kawasan Falls, Cebu",
-  "Baguio City, Benguet",
-  "Banaue Rice Terraces, Ifugao",
-  "Sagada, Mountain Province",
-  "Vigan, Ilocos Sur",
-  "Pagudpud, Ilocos Norte",
-  "Siargao Island",
-  "Cloud 9, Siargao",
-  "Bohol",
-  "Chocolate Hills, Bohol",
-  "Panglao Island, Bohol",
-  "Tagbilaran, Bohol",
-  "Davao City",
-  "Camiguin Island",
-  "Batanes",
-  "Hundred Islands, Pangasinan",
-];
-
 const getIconComponent = (iconName: string) => {
   const iconOption = ICON_OPTIONS.find((opt) => opt.value === iconName);
   return iconOption ? iconOption.icon : Clock;
@@ -259,6 +228,28 @@ export function CreateNewTravel() {
 
   // Icon search state
   const [iconSearchQuery, setIconSearchQuery] = useState("");
+
+  // Location autocomplete + route optimization state
+  const [locationSearchQuery, setLocationSearchQuery] = useState("");
+  const debouncedValue = useDebounce(locationSearchQuery);
+  const [selectedDayForRoute, setSelectedDayForRoute] = useState<string | null>(
+    null
+  );
+
+  const { data: placesData, isLoading: isLoadingPlaces } = usePlacesSearch(
+    debouncedValue.length >= 2
+      ? {
+          text: debouncedValue,
+          limit: 10,
+        }
+      : undefined,
+    {
+      enabled: debouncedValue.length >= 2,
+      queryKey: queryKeys.places.search(debouncedValue),
+    }
+  );
+
+  const placesSuggestions = placesData?.data || [];
 
   // API mutation for creating booking
   const createBookingMutation = useCreateBooking({
@@ -341,10 +332,8 @@ export function CreateNewTravel() {
     activityId: string
   ) => {
     if (searchTerm.length >= 2) {
-      const filtered = PHILIPPINE_LOCATIONS.filter((location) =>
-        location.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-      setLocationSuggestions(filtered.slice(0, 5));
+      updateActivity(dayId, activityId, "location", searchTerm);
+      setLocationSearchQuery(searchTerm);
       setActiveLocationInput({ dayId, activityId });
     } else {
       setLocationSuggestions([]);
@@ -352,13 +341,43 @@ export function CreateNewTravel() {
     }
   };
 
+  const handleAcceptOptimization = (
+    dayId: string,
+    optimizedActivities: Activity[]
+  ) => {
+    setItineraryDays((prev) =>
+      prev.map((day) =>
+        day.id === dayId
+          ? {
+              ...day,
+              activities: optimizedActivities.map((activity, index) => ({
+                ...activity,
+                order: index,
+              })),
+            }
+          : day
+      )
+    );
+    toast.success("Route Optimized", {
+      description: `Activities for Day ${
+        dayId.split("-")[1]
+      } have been reordered for optimal routing.`,
+    });
+    setHasUnsavedChanges(true);
+  };
+
   // Select location suggestion
   const selectLocationSuggestion = (
-    location: string,
+    locationOrPlace: string | Place,
     dayId: string,
     activityId: string
   ) => {
-    updateActivity(dayId, activityId, "location", location);
+    if (typeof locationOrPlace === "string") {
+      updateActivity(dayId, activityId, "location", locationOrPlace);
+    } else {
+      updateActivity(dayId, activityId, "location", locationOrPlace.name);
+      updateActivity(dayId, activityId, "locationData", locationOrPlace);
+    }
     setLocationSuggestions([]);
     setActiveLocationInput(null);
   };
@@ -494,7 +513,7 @@ export function CreateNewTravel() {
     dayId: string,
     activityId: string,
     field: keyof Activity,
-    value: string
+    value: string | Place
   ) => {
     // Validate time overlap if updating time field
     if (field === "time" && value) {
@@ -774,6 +793,34 @@ export function CreateNewTravel() {
           </div>
         </div>
       </ContentCard>
+      {itineraryDays.some((day) => {
+        const validLocations = day.activities.filter(
+          (a) =>
+            a.location &&
+            a.locationData &&
+            typeof a.locationData.lat === "number" &&
+            typeof a.locationData.lng === "number"
+        );
+        return validLocations.length >= 2;
+      }) && (
+        <RouteOptimizationPanel
+          itineraryDays={itineraryDays}
+          selectedDayId={
+            selectedDayForRoute ||
+            itineraryDays.find((d) => {
+              const validLocations = d.activities.filter(
+                (a) =>
+                  a.location &&
+                  a.locationData &&
+                  typeof a.locationData.lat === "number" &&
+                  typeof a.locationData.lng === "number"
+              );
+              return validLocations.length >= 2;
+            })?.id
+          }
+          onAcceptOptimization={handleAcceptOptimization}
+        />
+      )}
 
       {/* Travel Information */}
       <ContentCard>
@@ -1093,29 +1140,52 @@ export function CreateNewTravel() {
                               {activeLocationInput?.dayId === day.id &&
                                 activeLocationInput?.activityId ===
                                   activity.id &&
-                                locationSuggestions.length > 0 && (
+                                (placesSuggestions.length > 0 ||
+                                  locationSuggestions.length > 0) && (
                                   <div className="absolute z-10 top-full left-0 right-0 mt-1 bg-white border-2 border-[#E5E7EB] rounded-lg shadow-lg max-h-40 overflow-auto">
-                                    {locationSuggestions.map(
-                                      (suggestion, idx) => (
-                                        <button
-                                          key={idx}
-                                          type="button"
-                                          onClick={() =>
-                                            selectLocationSuggestion(
-                                              suggestion,
-                                              day.id,
-                                              activity.id
-                                            )
-                                          }
-                                          className="w-full px-4 py-2.5 text-left text-sm text-[#334155] hover:bg-[rgba(10,122,255,0.05)] hover:text-[#0A7AFF] transition-colors flex items-center gap-2 border-b border-[#F1F5F9] last:border-0"
-                                        >
-                                          <MapPin className="w-3.5 h-3.5 text-[#0A7AFF] shrink-0" />
-                                          <span className="truncate">
-                                            {suggestion}
-                                          </span>
-                                        </button>
-                                      )
-                                    )}
+                                    {placesSuggestions.length > 0
+                                      ? placesSuggestions.map(
+                                          (place: any, idx: number) => (
+                                            <button
+                                              key={idx}
+                                              type="button"
+                                              onClick={() =>
+                                                selectLocationSuggestion(
+                                                  place,
+                                                  day.id,
+                                                  activity.id
+                                                )
+                                              }
+                                              className="w-full px-4 py-2.5 text-left text-sm text-[#334155] hover:bg-[rgba(10,122,255,0.05)] hover:text-[#0A7AFF] transition-colors flex items-center gap-2 border-b border-[#F1F5F9] last:border-0"
+                                            >
+                                              <MapPin className="w-3.5 h-3.5 text-[#0A7AFF] shrink-0" />
+                                              <span className="truncate">
+                                                {place.name}
+                                              </span>
+                                            </button>
+                                          )
+                                        )
+                                      : locationSuggestions.map(
+                                          (suggestion, idx) => (
+                                            <button
+                                              key={idx}
+                                              type="button"
+                                              onClick={() =>
+                                                selectLocationSuggestion(
+                                                  suggestion,
+                                                  day.id,
+                                                  activity.id
+                                                )
+                                              }
+                                              className="w-full px-4 py-2.5 text-left text-sm text-[#334155] hover:bg-[rgba(10,122,255,0.05)] hover:text-[#0A7AFF] transition-colors flex items-center gap-2 border-b border-[#F1F5F9] last:border-0"
+                                            >
+                                              <MapPin className="w-3.5 h-3.5 text-[#0A7AFF] shrink-0" />
+                                              <span className="truncate">
+                                                {suggestion}
+                                              </span>
+                                            </button>
+                                          )
+                                        )}
                                   </div>
                                 )}
                             </div>

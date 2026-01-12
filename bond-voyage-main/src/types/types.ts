@@ -287,10 +287,17 @@ export interface FAQSource {
   systemCategory?: string;
 }
 
+export interface FAQAction {
+  label: string;
+  action: string;
+  type: "QUERY" | "NAVIGATION";
+}
+
 export interface ChatbotResponse {
   answer: string;
   confidence: string;
   sources: FAQSource[];
+  actions: FAQAction[];
 }
 
 export interface DashboardStats {

@@ -13,8 +13,8 @@
 
 @email = user@example.com
 @password = User@123
-@adminEmail = admin@example.com
-@adminPassword = Admin@123
+@adminEmail = 4bstravelandtours2019@gmail.com
+@adminPassword = @4BsTravelandTours
 
 @accessToken =
 @userToken =

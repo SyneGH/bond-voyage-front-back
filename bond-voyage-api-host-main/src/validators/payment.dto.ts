@@ -33,9 +33,20 @@ export const createPaymentDto = z.object({
   transactionId: z.string().optional().nullable(),
 });
 
-export const updatePaymentStatusDto = z.object({
-  status: z.enum(["VERIFIED", "REJECTED"]),
-});
+export const updatePaymentStatusDto = z
+  .object({
+    status: z.enum(["VERIFIED", "REJECTED"]),
+    rejectionReason: z.string().optional().nullable(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.status === "REJECTED" && !data.rejectionReason) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Rejection reason is required",
+        path: ["rejectionReason"],
+      });
+    }
+  });
 
 export const paymentIdParamDto = z.object({
   id: z.string().uuid(),

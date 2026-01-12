@@ -83,7 +83,8 @@ export const PaymentController = {
       const payment = await PaymentService.updatePaymentStatus(
         id,
         payload.status,
-        authUser.userId
+        authUser.userId,
+        payload.rejectionReason ?? undefined
       );
       createResponse(res, HTTP_STATUS.OK, "Payment status updated", payment);
     } catch (error) {
