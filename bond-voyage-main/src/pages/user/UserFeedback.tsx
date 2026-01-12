@@ -1,19 +1,42 @@
-import { Star, MessageCircle, Plus, Filter, X, CheckCircle, TrendingUp } from "lucide-react";
-import { useState, useMemo } from "react";
+import {
+  Star,
+  MessageCircle,
+  Plus,
+  Filter,
+  X,
+  CheckCircle,
+} from "lucide-react";
+import { useState, useMemo, useEffect } from "react";
 import { StatCard } from "../../components/StatCard";
 import { ContentCard } from "../../components/ContentCard";
-import { Popover, PopoverContent, PopoverTrigger } from "../../components/ui/popover";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "../../components/ui/popover";
 import { Checkbox } from "../../components/ui/checkbox";
 import { ConfirmationModal } from "../../components/ConfirmationModal";
 import { Textarea } from "../../components/ui/textarea";
 import { Label } from "../../components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select";
-import { toast } from "sonner@2.0.3";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../../components/ui/select";
+import { toast } from "sonner";
 import { useProfile } from "../../components/ProfileContext";
 import { FAQAssistant } from "../../components/FAQAssistant";
+import {
+  useFeedbackList,
+  useSubmitFeedback,
+} from "../../hooks/useFeedbackList";
+import { useMyBookings } from "../../hooks/useBookings";
+import type { Feedback } from "../../types/types";
 
 interface FeedbackItem {
-  id: number;
+  id: string;
   customer: string;
   bookingId: string;
   trip: string;
@@ -28,7 +51,6 @@ interface FeedbackItem {
   replyDate?: string;
 }
 
-// Available trips from UserHistory.tsx completed bookings
 interface AvailableTrip {
   id: string;
   destination: string;
@@ -40,63 +62,95 @@ export function UserFeedback() {
   const [starFilters, setStarFilters] = useState<number[]>([]);
   const [filterOpen, setFilterOpen] = useState(false);
 
-  const {profileData} = useProfile()
-  
+  const { profileData } = useProfile();
+
   // New feedback modal state
   const [newFeedbackModalOpen, setNewFeedbackModalOpen] = useState(false);
-  const [newFeedback, setNewFeedback] = useState({ trip: "", rating: 5, comment: "", bookingId: "" });
-  
+  const [newFeedback, setNewFeedback] = useState({
+    bookingId: "",
+    rating: 5,
+    comment: "",
+  });
+
   // View reply modal state
   const [viewReplyModalOpen, setViewReplyModalOpen] = useState(false);
-  const [selectedFeedbackForView, setSelectedFeedbackForView] = useState<FeedbackItem | null>(null);
-  
-  // Get available trips from completed bookings (matching UserHistory.tsx completed trips)
-  const availableTrips: AvailableTrip[] = [
-    { id: "BV-2024-098", destination: "Boracay, Aklan", tripName: "Boracay Beach Escape" },
-    { id: "BV-2024-087", destination: "Puerto Princesa, Palawan", tripName: "Puerto Princesa Underground River Tour" },
-    { id: "BV-2024-076", destination: "Baguio City, Benguet", tripName: "Baguio Summer Capital Tour" },
-    { id: "BV-2024-065", destination: "Siargao Island, Surigao del Norte", tripName: "Siargao Surfing Adventure" },
-    { id: "BV-2024-054", destination: "Vigan, Ilocos Sur", tripName: "Vigan Heritage Tour" },
-    { id: "BV-2024-043", destination: "Batanes Islands", tripName: "Batanes Cultural Immersion" },
-    { id: "BV-2024-032", destination: "Coron, Palawan", tripName: "Coron Island Hopping" },
-    { id: "BV-2024-021", destination: "Davao City, Davao del Sur", tripName: "Davao Food and Adventure" },
-  ];
-  
-  const [feedbackItems, setFeedbackItems] = useState<FeedbackItem[]>([
-    {
-      id: 1,
-      customer: "Maria Santos",
-      bookingId: "BV-2024-098",
-      trip: "Boracay Beach Escape",
-      destination: "Boracay, Aklan",
-      rating: 5,
-      text: "Amazing experience! The itinerary was perfect and everything went smoothly. Highly recommend!",
-      date: "August 20, 2024",
-      unread: false,
-      responded: true,
-      read: true,
-      reply: "Thank you so much for your wonderful feedback! We're thrilled to hear that you had an amazing experience in Boracay. Your satisfaction is our top priority, and we look forward to helping you plan your next adventure!",
-      replyDate: "August 21, 2024",
+  const [selectedFeedbackForView, setSelectedFeedbackForView] =
+    useState<FeedbackItem | null>(null);
+
+  // Fetch feedback data
+  const { data: feedbackData, isLoading: feedbackLoading } = useFeedbackList();
+
+  // Fetch completed bookings for the dropdown
+  const { data: bookingsData } = useMyBookings({ status: "COMPLETED" });
+
+  // Submit feedback mutation
+  const submitFeedbackMutation = useSubmitFeedback({
+    onSuccess: () => {
+      toast.success("Thank you for your feedback!", {
+        description:
+          "Your review has been submitted and will be reviewed by our team",
+      });
+      setNewFeedbackModalOpen(false);
+      setNewFeedback({ bookingId: "", rating: 5, comment: "" });
     },
-    {
-      id: 2,
-      customer: "Maria Santos",
-      bookingId: "BV-2024-087",
-      trip: "Puerto Princesa Underground River Tour",
-      destination: "Puerto Princesa, Palawan",
-      rating: 4,
-      text: "Great trip overall, but hotel check-in was delayed. Otherwise, everything was wonderful!",
-      date: "July 12, 2024",
-      unread: false,
-      responded: true,
-      read: true,
-      reply: "Thank you for your feedback! We apologize for the delay in check-in. We've addressed this issue with our hotel partners to ensure better service in the future. We're glad you enjoyed the rest of your trip!",
-      replyDate: "July 13, 2024",
+    onError: (error: any) => {
+      toast.error("Failed to submit feedback", {
+        description: error.response?.data?.message || "Please try again later",
+      });
     },
-  ]);
+  });
+
+  // Transform API data to component format
+  const [feedbackItems, setFeedbackItems] = useState<FeedbackItem[]>([]);
+
+  useEffect(() => {
+    if (feedbackData?.data) {
+      const transformedData: FeedbackItem[] = feedbackData.data.map(
+        (item: any) => ({
+          id: item.id,
+          customer: `${item.user?.firstName || ""} ${
+            item.user?.lastName || ""
+          }`.trim(),
+          bookingId: item.booking?.id?.slice(0, 8).toUpperCase() || "N/A",
+          trip: item.booking?.destination || "Trip Details",
+          destination: item.booking?.destination || "",
+          rating: item.rating,
+          text: item.comment,
+          date: new Date(item.createdAt).toLocaleDateString("en-US", {
+            month: "long",
+            day: "numeric",
+            year: "numeric",
+          }),
+          unread: !item.response,
+          responded: !!item.response,
+          read: !!item.response,
+          reply: item.response || undefined,
+          replyDate: item.respondedAt
+            ? new Date(item.respondedAt).toLocaleDateString("en-US", {
+                month: "long",
+                day: "numeric",
+                year: "numeric",
+              })
+            : undefined,
+        })
+      );
+      setFeedbackItems(transformedData);
+    }
+  }, [feedbackData]);
+
+  // Get available trips from completed bookings
+  const availableTrips: AvailableTrip[] = useMemo(() => {
+    if (!bookingsData?.data) return [];
+
+    return bookingsData.data.map((booking: any) => ({
+      id: booking.id,
+      destination: booking.destination,
+      tripName: booking.destination, // Use destination as trip name if no specific name
+    }));
+  }, [bookingsData]);
 
   const handleOpenNewFeedbackModal = () => {
-    setNewFeedback({ trip: "", rating: 5, comment: "", bookingId: "" });
+    setNewFeedback({ bookingId: "", rating: 5, comment: "" });
     setNewFeedbackModalOpen(true);
   };
 
@@ -106,32 +160,10 @@ export function UserFeedback() {
       return;
     }
 
-    const today = new Date().toLocaleDateString('en-US', { 
-      month: 'long', 
-      day: 'numeric', 
-      year: 'numeric' 
-    });
-
-    const selectedTrip = availableTrips.find(t => t.id === newFeedback.bookingId);
-
-    const newFeedbackItem: FeedbackItem = {
-      id: feedbackItems.length + 1,
-      customer: "Maria Santos",
-      bookingId: newFeedback.bookingId,
-      trip: newFeedback.trip,
-      destination: selectedTrip?.destination || "",
+    submitFeedbackMutation.mutate({
+      // bookingId: newFeedback.bookingId,
       rating: newFeedback.rating,
-      text: newFeedback.comment,
-      date: today,
-      unread: false,
-      read: false,
-    };
-
-    setFeedbackItems([newFeedbackItem, ...feedbackItems]);
-    setNewFeedbackModalOpen(false);
-    setNewFeedback({ trip: "", rating: 5, comment: "", bookingId: "" });
-    toast.success("Thank you for your feedback!", {
-      description: "Your review has been submitted and will be reviewed by our team"
+      comment: newFeedback.comment,
     });
   };
 
@@ -141,10 +173,8 @@ export function UserFeedback() {
   };
 
   const toggleStarFilter = (star: number) => {
-    setStarFilters(prev => 
-      prev.includes(star) 
-        ? prev.filter(s => s !== star)
-        : [...prev, star]
+    setStarFilters((prev) =>
+      prev.includes(star) ? prev.filter((s) => s !== star) : [...prev, star]
     );
   };
 
@@ -158,7 +188,11 @@ export function UserFeedback() {
         {[1, 2, 3, 4, 5].map((star) => (
           <Star
             key={star}
-            className={`w-4 h-4 ${star <= rating ? 'fill-[#FFB84D] text-[#FFB84D]' : 'text-[#E5E7EB]'}`}
+            className={`w-4 h-4 ${
+              star <= rating
+                ? "fill-[#FFB84D] text-[#FFB84D]"
+                : "text-[#E5E7EB]"
+            }`}
           />
         ))}
       </div>
@@ -168,13 +202,14 @@ export function UserFeedback() {
   // Filter feedback based on selected tab and star filters
   const filteredFeedback = useMemo(() => {
     return feedbackItems
-      .filter(item => {
+      .filter((item) => {
         // Tab filter
         if (selectedTab === "unread" && !item.unread) return false;
-        
+
         // Star filter
-        if (starFilters.length > 0 && !starFilters.includes(item.rating)) return false;
-        
+        if (starFilters.length > 0 && !starFilters.includes(item.rating))
+          return false;
+
         return true;
       })
       .sort((a, b) => {
@@ -190,25 +225,37 @@ export function UserFeedback() {
   // Calculate stats based on ALL feedback (not just filtered)
   const stats = useMemo(() => {
     const totalFeedback = feedbackItems.length;
-    const respondedCount = feedbackItems.filter(item => item.responded).length;
-    const avgRatingNum = feedbackItems.length > 0 
-      ? feedbackItems.reduce((sum, item) => sum + item.rating, 0) / feedbackItems.length
-      : 0;
+    const respondedCount = feedbackItems.filter(
+      (item) => item.responded
+    ).length;
+    const avgRatingNum =
+      feedbackItems.length > 0
+        ? feedbackItems.reduce((sum, item) => sum + item.rating, 0) /
+          feedbackItems.length
+        : 0;
     const avgRating = avgRatingNum.toFixed(1);
 
     return {
       totalFeedback,
       avgRating,
       avgRatingNum,
-      respondedCount
+      respondedCount,
     };
   }, [feedbackItems]);
 
-  const unreadCount = feedbackItems.filter(item => item.unread).length;
+  const unreadCount = feedbackItems.filter((item) => item.unread).length;
+
+  if (feedbackLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#0A7AFF]"></div>
+      </div>
+    );
+  }
 
   return (
     <div>
-      {/* Stats Row - Shows overall stats from all feedback */}
+      {/* Stats Row */}
       <div className="grid grid-cols-3 gap-6 mb-8">
         <StatCard
           icon={MessageCircle}
@@ -233,13 +280,15 @@ export function UserFeedback() {
         />
       </div>
 
-      <ContentCard 
-        title={`${selectedTab === "all" ? "All" : "Unread"} Feedback (${filteredFeedback.length})`}
+      <ContentCard
+        title={`${selectedTab === "all" ? "All" : "Unread"} Feedback (${
+          filteredFeedback.length
+        })`}
       >
-        {/* Filter Tabs and Filter Button */}
+        {/* Filter Tabs and Buttons */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-1 border-b-2 border-[#E5E7EB]">
-            <button 
+            <button
               onClick={() => setSelectedTab("all")}
               className={`px-5 h-11 text-sm transition-colors ${
                 selectedTab === "all"
@@ -249,7 +298,7 @@ export function UserFeedback() {
             >
               All
             </button>
-            <button 
+            <button
               onClick={() => setSelectedTab("unread")}
               className={`px-5 h-11 text-sm transition-colors ${
                 selectedTab === "unread"
@@ -261,9 +310,8 @@ export function UserFeedback() {
             </button>
           </div>
 
-          {/* Filter and New Feedback Buttons */}
           <div className="flex items-center gap-3">
-            {/* Star Filter Button */}
+            {/* Star Filter */}
             <Popover open={filterOpen} onOpenChange={setFilterOpen}>
               <PopoverTrigger asChild>
                 <button className="h-10 px-4 rounded-xl border border-[#E5E7EB] hover:border-[#0A7AFF] hover:bg-[#F8FAFB] flex items-center gap-2 text-sm font-medium text-[#334155] transition-all relative">
@@ -279,7 +327,9 @@ export function UserFeedback() {
               <PopoverContent className="w-64 p-4" align="end">
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
-                    <h4 className="text-sm font-semibold text-[#1A2B4F]">Filter by Rating</h4>
+                    <h4 className="text-sm font-semibold text-[#1A2B4F]">
+                      Filter by Rating
+                    </h4>
                     {starFilters.length > 0 && (
                       <button
                         onClick={clearFilters}
@@ -302,7 +352,9 @@ export function UserFeedback() {
                           className="flex items-center gap-2 text-sm font-medium cursor-pointer"
                         >
                           {renderStars(star)}
-                          <span className="text-[#64748B]">({star} {star === 1 ? 'star' : 'stars'})</span>
+                          <span className="text-[#64748B]">
+                            ({star} {star === 1 ? "star" : "stars"})
+                          </span>
                         </label>
                       </div>
                     ))}
@@ -314,8 +366,11 @@ export function UserFeedback() {
             {/* New Feedback Button */}
             <button
               onClick={handleOpenNewFeedbackModal}
-              className="h-10 px-4 rounded-xl text-white text-sm font-medium shadow-[0_2px_8px_rgba(10,122,255,0.25)] hover:-translate-y-0.5 transition-all flex items-center gap-2"
-              style={{ background: `linear-gradient(135deg, var(--gradient-from), var(--gradient-to))` }}
+              disabled={availableTrips.length === 0}
+              className="h-10 px-4 rounded-xl text-white text-sm font-medium shadow-[0_2px_8px_rgba(10,122,255,0.25)] hover:-translate-y-0.5 transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
+              style={{
+                background: `linear-gradient(135deg, var(--gradient-from), var(--gradient-to))`,
+              }}
             >
               <Plus className="w-4 h-4" strokeWidth={2} />
               Leave Feedback
@@ -327,7 +382,7 @@ export function UserFeedback() {
         {starFilters.length > 0 && (
           <div className="flex items-center gap-2 mb-4 flex-wrap">
             <span className="text-sm text-[#64748B]">Active filters:</span>
-            {starFilters.map(star => (
+            {starFilters.map((star) => (
               <button
                 key={star}
                 onClick={() => toggleStarFilter(star)}
@@ -343,7 +398,11 @@ export function UserFeedback() {
         {/* Feedback List */}
         {filteredFeedback.length === 0 ? (
           <div className="text-center py-12">
-            <p className="text-[#64748B]">No feedback found matching your filters.</p>
+            <p className="text-[#64748B]">
+              {feedbackItems.length === 0
+                ? "No feedback yet. Complete a trip to leave feedback!"
+                : "No feedback found matching your filters."}
+            </p>
           </div>
         ) : (
           <div className="space-y-4">
@@ -352,9 +411,10 @@ export function UserFeedback() {
                 key={item.id}
                 className={`
                   p-6 rounded-2xl border-2 transition-all duration-200 cursor-pointer
-                  ${item.unread 
-                    ? 'border-[#0A7AFF] bg-[rgba(10,122,255,0.02)] hover:shadow-[0_4px_12px_rgba(10,122,255,0.1)]' 
-                    : 'border-[#E5E7EB] hover:border-[#0A7AFF] hover:shadow-[0_4px_12px_rgba(10,122,255,0.1)]'
+                  ${
+                    item.unread
+                      ? "border-[#0A7AFF] bg-[rgba(10,122,255,0.02)] hover:shadow-[0_4px_12px_rgba(10,122,255,0.1)]"
+                      : "border-[#E5E7EB] hover:border-[#0A7AFF] hover:shadow-[0_4px_12px_rgba(10,122,255,0.1)]"
                   }
                 `}
               >
@@ -363,14 +423,21 @@ export function UserFeedback() {
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#0A7AFF] to-[#14B8A6] flex items-center justify-center">
                       <span className="text-white text-sm font-medium">
-                        {item.customer.split(' ').map(n => n[0]).join('')}
+                        {item.customer
+                          .split(" ")
+                          .map((n) => n[0])
+                          .join("")}
                       </span>
                     </div>
                     <div>
                       <div className="flex items-center gap-2 mb-1">
-                        <span className="text-sm text-[#1A2B4F] font-semibold">{item.customer}</span>
+                        <span className="text-sm text-[#1A2B4F] font-semibold">
+                          {item.customer}
+                        </span>
                         <span className="text-sm text-[#64748B]">•</span>
-                        <span className="text-sm text-[#64748B]">Booking #{item.bookingId}</span>
+                        <span className="text-sm text-[#64748B]">
+                          Booking #{item.bookingId}
+                        </span>
                         {renderStars(item.rating)}
                       </div>
                       <p className="text-sm text-[#64748B]">{item.trip}</p>
@@ -413,7 +480,7 @@ export function UserFeedback() {
                   </div>
                   <div className="flex items-center gap-2">
                     {item.responded && (
-                      <button 
+                      <button
                         onClick={() => handleViewReply(item)}
                         className="h-9 px-4 rounded-lg border border-[#E5E7EB] hover:border-[#0A7AFF] hover:bg-[#F8FAFB] text-sm text-[#334155] font-medium transition-all"
                       >
@@ -442,29 +509,37 @@ export function UserFeedback() {
         content={
           <div className="space-y-4">
             <div>
-              <Label htmlFor="trip-select" className="text-[#1A2B4F] mb-2 block">
+              <Label
+                htmlFor="trip-select"
+                className="text-[#1A2B4F] mb-2 block"
+              >
                 Select Trip <span className="text-[#FF6B6B]">*</span>
               </Label>
-              <Select 
+              <Select
                 value={newFeedback.bookingId}
-                onValueChange={(value) => {
-                  const selectedTrip = availableTrips.find(t => t.id === value);
-                  setNewFeedback({ 
-                    ...newFeedback, 
-                    bookingId: value,
-                    trip: selectedTrip ? selectedTrip.tripName : ""
-                  });
-                }}
+                onValueChange={(value: any) =>
+                  setNewFeedback({ ...newFeedback, bookingId: value })
+                }
               >
-                <SelectTrigger id="trip-select" className="h-11 border-[#E5E7EB] focus:border-[#0A7AFF] focus:ring-[#0A7AFF]/10">
+                <SelectTrigger
+                  id="trip-select"
+                  className="h-11 border-[#E5E7EB] focus:border-[#0A7AFF] focus:ring-[#0A7AFF]/10"
+                >
                   <SelectValue placeholder="Choose a completed trip..." />
                 </SelectTrigger>
                 <SelectContent>
-                  {availableTrips.map((trip) => (
-                    <SelectItem key={trip.id} value={trip.id}>
-                      Booking #{trip.id} - {trip.tripName} ({trip.destination})
+                  {availableTrips.length === 0 ? (
+                    <SelectItem value="no-trips" disabled>
+                      No completed trips available
                     </SelectItem>
-                  ))}
+                  ) : (
+                    availableTrips.map((trip) => (
+                      <SelectItem key={trip.id} value={trip.id}>
+                        Booking #{trip.id.slice(0, 8).toUpperCase()} -{" "}
+                        {trip.tripName}
+                      </SelectItem>
+                    ))
+                  )}
                 </SelectContent>
               </Select>
               <p className="text-xs text-[#64748B] mt-2">
@@ -482,10 +557,10 @@ export function UserFeedback() {
                     onClick={() => setNewFeedback({ ...newFeedback, rating })}
                     className="group p-2 hover:scale-110 transition-transform"
                   >
-                    <Star 
+                    <Star
                       className={`w-10 h-10 transition-colors ${
-                        rating <= newFeedback.rating 
-                          ? "fill-yellow-400 text-yellow-400" 
+                        rating <= newFeedback.rating
+                          ? "fill-yellow-400 text-yellow-400"
                           : "text-gray-300 dark:text-gray-600 group-hover:text-yellow-400"
                       }`}
                       strokeWidth={2}
@@ -494,30 +569,44 @@ export function UserFeedback() {
                 ))}
               </div>
               <p className="text-xs text-[#64748B] mt-2">
-                {newFeedback.rating === 5 ? "Excellent!" : 
-                 newFeedback.rating === 4 ? "Very Good" :
-                 newFeedback.rating === 3 ? "Good" :
-                 newFeedback.rating === 2 ? "Fair" : "Poor"}
+                {newFeedback.rating === 5
+                  ? "Excellent!"
+                  : newFeedback.rating === 4
+                  ? "Very Good"
+                  : newFeedback.rating === 3
+                  ? "Good"
+                  : newFeedback.rating === 2
+                  ? "Fair"
+                  : "Poor"}
               </p>
             </div>
             <div>
-              <Label htmlFor="feedback-comment" className="text-[#1A2B4F] mb-2 block">
+              <Label
+                htmlFor="feedback-comment"
+                className="text-[#1A2B4F] mb-2 block"
+              >
                 Comment <span className="text-[#FF6B6B]">*</span>
               </Label>
               <Textarea
                 id="feedback-comment"
                 value={newFeedback.comment}
-                onChange={(e) => setNewFeedback({ ...newFeedback, comment: e.target.value })}
+                onChange={(e) =>
+                  setNewFeedback({ ...newFeedback, comment: e.target.value })
+                }
                 placeholder="Share your experience with this trip..."
                 className="min-h-[150px] border-[#E5E7EB] focus:border-[#0A7AFF] focus:ring-[#0A7AFF]/10 resize-none"
+                maxLength={500}
               />
               <p className="text-xs text-[#64748B] mt-2">
-                {newFeedback.comment.length}/500 characters - Share your honest experience
+                {newFeedback.comment.length}/500 characters - Share your honest
+                experience
               </p>
             </div>
             <div className="p-4 rounded-xl bg-primary/5 border border-primary/20">
               <p className="text-xs text-[#64748B]">
-                <strong className="text-primary">Note:</strong> Your feedback helps us improve our services and assists other travelers in making informed decisions. All feedback is reviewed by our team.
+                <strong className="text-primary">Note:</strong> Your feedback
+                helps us improve our services and assists other travelers in
+                making informed decisions. All feedback is reviewed by our team.
               </p>
             </div>
           </div>
@@ -525,9 +614,11 @@ export function UserFeedback() {
         onConfirm={handleSubmitFeedback}
         onCancel={() => {
           setNewFeedbackModalOpen(false);
-          setNewFeedback({ trip: "", rating: 5, comment: "", bookingId: "" });
+          setNewFeedback({ bookingId: "", rating: 5, comment: "" });
         }}
-        confirmText="Submit Feedback"
+        confirmText={
+          submitFeedbackMutation.isPending ? "Submitting..." : "Submit Feedback"
+        }
         cancelText="Cancel"
         confirmVariant="default"
       />
@@ -546,32 +637,46 @@ export function UserFeedback() {
         content={
           selectedFeedbackForView && (
             <div className="space-y-4">
-              {/* Feedback */}
               <div>
-                <h4 className="text-sm font-semibold text-[#1A2B4F] mb-2">Your Feedback</h4>
+                <h4 className="text-sm font-semibold text-[#1A2B4F] mb-2">
+                  Your Feedback
+                </h4>
                 <div className="bg-[rgba(10,122,255,0.08)] border border-[rgba(10,122,255,0.2)] rounded-xl p-4">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-semibold text-[#1A2B4F]">{selectedFeedbackForView.customer}</span>
+                    <span className="text-sm font-semibold text-[#1A2B4F]">
+                      {selectedFeedbackForView.customer}
+                    </span>
                     {renderStars(selectedFeedbackForView.rating)}
                   </div>
-                  <p className="text-sm text-[#64748B] mb-1">{selectedFeedbackForView.trip}</p>
-                  <p className="text-sm text-[#334155] italic">"{selectedFeedbackForView.text}"</p>
-                  <p className="text-xs text-[#64748B] mt-2">{selectedFeedbackForView.date}</p>
+                  <p className="text-sm text-[#64748B] mb-1">
+                    {selectedFeedbackForView.trip}
+                  </p>
+                  <p className="text-sm text-[#334155] italic">
+                    "{selectedFeedbackForView.text}"
+                  </p>
+                  <p className="text-xs text-[#64748B] mt-2">
+                    {selectedFeedbackForView.date}
+                  </p>
                 </div>
               </div>
 
-              {/* Admin Reply */}
               <div>
-                <h4 className="text-sm font-semibold text-[#1A2B4F] mb-2">{profileData.companyName}'s Reply</h4>
+                <h4 className="text-sm font-semibold text-[#1A2B4F] mb-2">
+                  {profileData.companyName || "BondVoyage"}'s Reply
+                </h4>
                 <div className="bg-[rgba(16,185,129,0.08)] border border-[rgba(16,185,129,0.2)] rounded-xl p-4">
                   <div className="flex items-center gap-2 mb-2">
                     <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-[rgba(16,185,129,0.1)] text-[#10B981] text-xs font-medium">
                       <CheckCircle className="w-3 h-3" />
                       Responded
                     </span>
-                    <span className="text-xs text-[#64748B]">{selectedFeedbackForView.replyDate}</span>
+                    <span className="text-xs text-[#64748B]">
+                      {selectedFeedbackForView.replyDate}
+                    </span>
                   </div>
-                  <p className="text-sm text-[#334155] leading-relaxed">{selectedFeedbackForView.reply}</p>
+                  <p className="text-sm text-[#334155] leading-relaxed">
+                    {selectedFeedbackForView.reply}
+                  </p>
                 </div>
               </div>
             </div>

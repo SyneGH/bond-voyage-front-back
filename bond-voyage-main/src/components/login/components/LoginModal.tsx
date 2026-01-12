@@ -12,13 +12,11 @@ import {
   X,
 } from "lucide-react";
 import { DialogTitle, DialogDescription } from "./ui/dialog";
-import * as DialogPrimitive from "@radix-ui/react-dialog@1.1.6";
+import * as DialogPrimitive from "@radix-ui/react-dialog";
 import bondVoyageLogo from "../assets/40755770f782ee2806bf45fc8b364947bbbe25e5.png";
 import { SideType, useSide } from "../../SideContext";
-import { jwtDecode } from "jwt-decode";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
-import { login } from "../utils/api/auth";
+import { useLogin } from "../../../hooks/useAuth";
 
 interface LoginModalProps {
   isOpen: boolean;
@@ -38,7 +36,6 @@ export function LoginModal({
   const [showPassword, setShowPassword] = useState(false);
   const [emailError, setEmailError] = useState("");
   const [passwordError, setPasswordError] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
   const [emailTouched, setEmailTouched] = useState(false);
   const [passwordTouched, setPasswordTouched] = useState(false);
   const { switchSide } = useSide();
@@ -48,6 +45,40 @@ export function LoginModal({
     title: string;
     message: string;
   } | null>(null);
+
+  const loginMutation = useLogin({
+    onSuccess: (response) => {
+      if (response.data?.user) {
+        const role = response.data.user.role.toLowerCase() as SideType;
+        switchSide(role);
+
+        console.log(response);
+
+        setShowToast({
+          type: "success",
+          title: "Login Successful!",
+          message: "Welcome to BondVoyage. Redirecting to your dashboard...",
+        });
+
+        setTimeout(() => {
+          setShowToast(null);
+          if (role === "admin") navigate("/");
+          else navigate("/user/home");
+          onClose();
+        }, 2000);
+      }
+    },
+    onError: (error: any) => {
+      console.log(error);
+      setShowToast({
+        type: "error",
+        title: "Login Failed",
+        message:
+          error.response?.data?.message ||
+          "Invalid email or password. Please check your credentials and try again.",
+      });
+    },
+  });
 
   const validateEmail = (value: string) => {
     if (!value) {
@@ -91,59 +122,23 @@ export function LoginModal({
     setEmailTouched(true);
     setPasswordTouched(true);
 
-    setIsLoading(true);
-
-    try {
-      if (emailErr || passwordErr) {
-        setShowToast({
-          type: "error",
-          title: "Login Failed",
-          message:
-            "Invalid email or password. Please check your credentials and try again.",
-        });
-        setTimeout(() => setShowToast(null), 6000);
-        return;
-      }
-
-      const response = await login(email, password);
-
-      if (response.status === 200) {
-        const role = response.data.data.user.role.toLowerCase() as SideType;
-        switchSide(role);
-
-        setIsLoading(false);
-        setShowToast({
-          type: "success",
-          title: "Login Successful!",
-          message: "Welcome to BondVoyage. Redirecting to your dashboard...",
-        });
-
-        setTimeout(() => {
-          setShowToast(null);
-          if (role === "admin") navigate("/");
-          else navigate("/user/home");
-          onClose();
-        }, 2000);
-      }
-    } catch (error) {
+    if (emailErr || passwordErr) {
       setShowToast({
         type: "error",
-        title: "Invalid Credentials",
-        message: "Please try again.",
+        title: "Validation Error",
+        message: "Please fix the errors in the form before submitting.",
       });
-
-      setIsLoading(false);
-
-      setTimeout(() => {
-        setShowToast(null);
-      }, 2000);
+      setTimeout(() => setShowToast(null), 6000);
+      return;
     }
+
+    loginMutation.mutate({ email, password });
   };
 
   const emailIsValid = email && !validateEmail(email);
   const isFormValid = emailIsValid && password.length >= 8;
+  const isLoading = loginMutation.isPending;
 
-  // Reset form when modal closes
   useEffect(() => {
     if (!isOpen) {
       setEmail("");
@@ -183,8 +178,8 @@ export function LoginModal({
               WebkitBackdropFilter: "blur(12px)",
             }}
           />
-          <DialogPrimitive.Content className="fixed top-[50%] left-[50%] z-50 translate-x-[-50%] translate-y-[-50%] max-w-[1200px] w-[95vw] p-0 overflow-hidden border-none gap-0 bg-white rounded-xl shadow-2xl data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 duration-200">
-            <div className="flex flex-col lg:flex-row min-h-[600px]">
+          <DialogPrimitive.Content className="fixed top-[50%] left-[50%] z-50 translate-x-[-50%] translate-y-[-50%] max-w-300 w-[95vw] p-0 overflow-hidden border-none gap-0 bg-white rounded-xl shadow-2xl data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 duration-200">
+            <div className="flex flex-col lg:flex-row min-h-150">
               {/* Left Column: Login Form */}
               <div className="flex-1 bg-white overflow-y-auto relative">
                 <DialogPrimitive.Close className="absolute top-4 right-4 rounded-lg p-2 opacity-70 transition-all hover:opacity-100 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-hidden disabled:pointer-events-none text-[#64748B] hover:text-[#1A2B4F] hover:bg-[#F8FAFB] z-10">
@@ -192,7 +187,7 @@ export function LoginModal({
                   <span className="sr-only">Close</span>
                 </DialogPrimitive.Close>
 
-                <div className="p-6 md:p-10 max-w-[500px] mx-auto w-full">
+                <div className="p-6 md:p-10 max-w-125 mx-auto w-full">
                   <div className="mb-8">
                     <div
                       className="text-[#0A7AFF] mb-2 uppercase tracking-wider"
@@ -238,9 +233,9 @@ export function LoginModal({
                       }`}
                     >
                       {showToast.type === "error" ? (
-                        <XCircle className="w-5 h-5 text-[#FF6B6B] flex-shrink-0" />
+                        <XCircle className="w-5 h-5 text-[#FF6B6B] shrink-0" />
                       ) : (
-                        <CheckCircle className="w-5 h-5 text-[#10B981] flex-shrink-0" />
+                        <CheckCircle className="w-5 h-5 text-[#10B981] shrink-0" />
                       )}
                       <div className="flex-1">
                         <div
@@ -258,7 +253,7 @@ export function LoginModal({
                       </div>
                       <button
                         onClick={() => setShowToast(null)}
-                        className="text-[#64748B] hover:text-[#1A2B4F] transition-colors flex-shrink-0"
+                        className="text-[#64748B] hover:text-[#1A2B4F] transition-colors shrink-0"
                         style={{ fontSize: "20px" }}
                       >
                         ×
@@ -298,7 +293,7 @@ export function LoginModal({
                       </div>
                       {emailTouched && emailError && (
                         <div className="flex items-start gap-2 mt-2 animate-error">
-                          <AlertCircle className="w-4 h-4 text-[#FF6B6B] flex-shrink-0 mt-0.5" />
+                          <AlertCircle className="w-4 h-4 text-[#FF6B6B] shrink-0 mt-0.5" />
                           <span
                             className="text-[#FF6B6B]"
                             style={{ fontSize: "13px", fontWeight: 500 }}
@@ -346,7 +341,7 @@ export function LoginModal({
                       </div>
                       {passwordTouched && passwordError && (
                         <div className="flex items-start gap-2 mt-2 animate-error">
-                          <AlertCircle className="w-4 h-4 text-[#FF6B6B] flex-shrink-0 mt-0.5" />
+                          <AlertCircle className="w-4 h-4 text-[#FF6B6B] shrink-0 mt-0.5" />
                           <span
                             className="text-[#FF6B6B]"
                             style={{ fontSize: "13px", fontWeight: 500 }}
@@ -440,7 +435,7 @@ export function LoginModal({
               {/* Right Column: Visual Hero */}
               <div className="relative hidden lg:block lg:w-[48%] overflow-hidden">
                 <img
-                  src="https://images.unsplash.com/photo-1621217308295-afe2f0b40a69?w=1080&q=80"
+                  src="https://i0.wp.com/handluggageonly.co.uk/wp-content/uploads/2018/12/Hand-Luggage-Only-10-5.jpg?w=1600&ssl=1"
                   alt="Philippine Travel"
                   className="w-full h-full object-cover brightness-75"
                 />
@@ -454,7 +449,7 @@ export function LoginModal({
                 />
 
                 <div className="absolute inset-0 flex items-center justify-center p-8">
-                  <div className="max-w-[350px] text-white">
+                  <div className="max-w-87.5 text-white">
                     <img
                       src={bondVoyageLogo}
                       alt="BondVoyage"
@@ -490,7 +485,7 @@ export function LoginModal({
                         "Plan with confidence, travel with ease",
                       ].map((feature, i) => (
                         <div key={i} className="flex items-center gap-2">
-                          <CheckCircle className="w-5 h-5 text-[#10B981] flex-shrink-0" />
+                          <CheckCircle className="w-5 h-5 text-[#10B981] shrink-0" />
                           <span className="text-white text-sm opacity-90">
                             {feature}
                           </span>

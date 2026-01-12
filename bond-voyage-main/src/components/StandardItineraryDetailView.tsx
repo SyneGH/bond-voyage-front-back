@@ -1,5 +1,18 @@
-import { ArrowLeft, MapPin, Calendar, Users, Edit, Plane, Hotel, Camera, UtensilsCrossed, Car, Package } from "lucide-react";
+import {
+  ArrowLeft,
+  MapPin,
+  Calendar,
+  Users,
+  Edit,
+  Plane,
+  Hotel,
+  Camera,
+  UtensilsCrossed,
+  Car,
+  Package,
+} from "lucide-react";
 import { ImageWithFallback } from "./figma/ImageWithFallback";
+import { getIconByValue } from "../utils/helpers/getIconByValue";
 
 interface ItineraryActivity {
   time: string;
@@ -17,7 +30,7 @@ interface ItineraryDay {
 
 interface StandardItineraryDetailViewProps {
   itinerary: {
-    id: number;
+    id: string;
     title: string;
     destination: string;
     days: number;
@@ -31,8 +44,13 @@ interface StandardItineraryDetailViewProps {
   onDelete?: () => void;
 }
 
-export function StandardItineraryDetailView({ itinerary, itineraryDetails, onBack, onEdit, onDelete }: StandardItineraryDetailViewProps) {
-  
+export function StandardItineraryDetailView({
+  itinerary,
+  itineraryDetails,
+  onBack,
+  onEdit,
+  onDelete,
+}: StandardItineraryDetailViewProps) {
   return (
     <div className="space-y-6">
       {/* Header with back button */}
@@ -52,8 +70,8 @@ export function StandardItineraryDetailView({ itinerary, itineraryDetails, onBac
       {/* Hero Image and Overview */}
       <div className="rounded-2xl border-2 border-[#E5E7EB] overflow-hidden bg-white shadow-sm">
         <div className="h-[300px] relative overflow-hidden">
-          <ImageWithFallback 
-            src={itinerary.image} 
+          <ImageWithFallback
+            src={itinerary.image}
             alt={itinerary.destination}
             className="w-full h-full object-cover"
           />
@@ -61,7 +79,9 @@ export function StandardItineraryDetailView({ itinerary, itineraryDetails, onBac
           <div className="absolute bottom-0 left-0 right-0 p-8">
             <div className="flex items-end justify-between">
               <div>
-                <h1 className="text-white text-3xl font-semibold mb-2">{itinerary.title}</h1>
+                <h1 className="text-white text-3xl font-semibold mb-2">
+                  {itinerary.title}
+                </h1>
                 <div className="flex items-center gap-4 text-white/90">
                   <div className="flex items-center gap-2">
                     <MapPin className="w-4 h-4" />
@@ -74,13 +94,15 @@ export function StandardItineraryDetailView({ itinerary, itineraryDetails, onBac
                   {itinerary.pricePerPax && (
                     <div className="flex items-center gap-2">
                       <span className="text-lg">₱</span>
-                      <span className="text-sm">₱{itinerary.pricePerPax.toLocaleString()} per pax</span>
+                      <span className="text-sm">
+                        ₱{itinerary.pricePerPax.toLocaleString()} per pax
+                      </span>
                     </div>
                   )}
                 </div>
               </div>
               {onEdit && (
-                <button 
+                <button
                   onClick={onEdit}
                   className="h-10 px-4 rounded-xl bg-white/10 backdrop-blur-sm border border-white/20 text-white hover:bg-white/20 transition-all flex items-center gap-2"
                 >
@@ -100,27 +122,38 @@ export function StandardItineraryDetailView({ itinerary, itineraryDetails, onBac
             <Calendar className="w-5 h-5 text-white" />
           </div>
           <div>
-            <h3 className="font-semibold text-[#1A2B4F]">Day-by-Day Itinerary</h3>
-            <p className="text-sm text-[#64748B]">{itinerary.days}-day comprehensive travel plan</p>
+            <h3 className="font-semibold text-[#1A2B4F]">
+              Day-by-Day Itinerary
+            </h3>
+            <p className="text-sm text-[#64748B]">
+              {itinerary.days}-day comprehensive travel plan
+            </p>
           </div>
         </div>
 
         <div className="space-y-6">
           {itineraryDetails.map((day) => (
-            <div key={day.day} className="border-l-4 border-[#0A7AFF] pl-6 relative">
+            <div
+              key={day.day}
+              className="border-l-4 border-[#0A7AFF] pl-6 relative"
+            >
               {/* Day Header */}
               <div className="absolute -left-[17px] top-0 w-8 h-8 rounded-full bg-gradient-to-br from-[#0A7AFF] to-[#3B9EFF] flex items-center justify-center shadow-lg shadow-[#0A7AFF]/30">
-                <span className="text-white text-sm font-semibold">{day.day}</span>
+                <span className="text-white text-sm font-semibold">
+                  {day.day}
+                </span>
               </div>
-              
+
               <div className="mb-4">
-                <h4 className="font-semibold text-[#1A2B4F]">Day {day.day}: {day.title}</h4>
+                <h4 className="font-semibold text-[#1A2B4F]">
+                  Day {day.day}: {day.title}
+                </h4>
               </div>
 
               {/* Activities */}
               <div className="space-y-3 mb-6">
                 {day.activities.map((activity, idx) => {
-                  const IconComponent = activity.icon;
+                  const IconComponent = getIconByValue(activity.icon);
                   return (
                     <div
                       key={idx}
@@ -133,10 +166,16 @@ export function StandardItineraryDetailView({ itinerary, itineraryDetails, onBac
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between gap-4 mb-1">
-                          <h5 className="font-medium text-[#1A2B4F]">{activity.title}</h5>
-                          <span className="flex-shrink-0 text-sm text-[#0A7AFF] font-medium">{activity.time}</span>
+                          <h5 className="font-medium text-[#1A2B4F]">
+                            {activity.title}
+                          </h5>
+                          <span className="flex-shrink-0 text-sm text-[#0A7AFF] font-medium">
+                            {activity.time}
+                          </span>
                         </div>
-                        <p className="text-sm text-[#64748B] mb-1">{activity.description}</p>
+                        <p className="text-sm text-[#64748B] mb-1">
+                          {activity.description}
+                        </p>
                         {activity.location && (
                           <div className="flex items-center gap-1.5 text-xs text-[#64748B]">
                             <MapPin className="w-3.5 h-3.5" />
@@ -162,7 +201,9 @@ export function StandardItineraryDetailView({ itinerary, itineraryDetails, onBac
             </div>
             <div>
               <h3 className="font-semibold text-[#1A2B4F]">What's Included</h3>
-              <p className="text-xs text-[#64748B]">Standard package inclusions</p>
+              <p className="text-xs text-[#64748B]">
+                Standard package inclusions
+              </p>
             </div>
           </div>
           <ul className="space-y-2">

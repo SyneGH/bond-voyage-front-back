@@ -21,12 +21,17 @@ import {
   LogOut,
   Car,
 } from "lucide-react";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useSide } from "./SideContext";
-import { useProfile } from "./ProfileContext";
+import { useProfile } from "../hooks/useAuth";
 import bondVoyage from "../assets/BondVoyage Logo White (logo only).png";
 import SidebarSkeleton from "./SidebarSkeleton";
+import { getInitials } from "../utils/helpers/getInitials";
+import { useLogout } from "../hooks/useAuth";
+import { useNotifications } from "../hooks/useNotifications";
+import { toast } from "sonner";
+import { User as IUser } from "../types/types";
 
 interface UserSidebarProps {
   currentTheme: string;
@@ -44,19 +49,41 @@ export function UserSidebar({
   const location = useLocation();
   const navigate = useNavigate();
   const { switchSide } = useSide();
-  const { userProfileData } = useProfile();
+  const { data: userProfileData, isLoading: profileDataIsLoading } =
+    useProfile();
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showNotificationMenu, setShowNotificationMenu] = useState(false);
   const [showThemeMenu, setShowThemeMenu] = useState(false);
   const [showSideMenu, setShowSideMenu] = useState(false);
   const [showMoreMenu, setShowMoreMenu] = useState(false);
-  const [showSkeleton, setShowSkeleton] = useState<boolean>(true);
 
-  useEffect(() => {
-    setTimeout(() => {
-      setShowSkeleton(false);
-    }, 3000);
-  }, [setShowSkeleton]);
+  // Memoize profile data with proper fallback
+  const profileData: IUser = useMemo(() => {
+    return userProfileData?.data?.user
+      ? userProfileData.data.user
+      : {
+          id: "",
+          email: "",
+          firstName: "",
+          middleName: "",
+          lastName: "",
+          mobile: "",
+          role: "",
+          isActive: false,
+          createdAt: "",
+          updatedAt: "",
+          lastLogin: "",
+          avatarUrl: "",
+          birthday: "",
+          companyName: "",
+          employeeId: "",
+          customerRating: 0,
+        };
+  }, [userProfileData?.data?.user]);
+
+  // Use real notifications hook if available
+  const { data: notificationsResponse } = useNotifications();
+  const { mutate: logout } = useLogout();
 
   const menuItems = [
     { id: "/user/home", icon: Home, label: "Home" },
@@ -98,52 +125,22 @@ export function UserSidebar({
     navigate("/");
   };
 
-  // Handle logout
+  // Handle logout with proper error handling
   const handleLogout = () => {
-    navigate("/user/home");
-    setShowUserMenu(false);
-    // You can add actual logout logic here
+    logout(undefined, {
+      onSuccess: () => {
+        navigate("/");
+        setShowUserMenu(false);
+      },
+      onError: () => {
+        toast.error("Logout failed. Please try again");
+      },
+    });
   };
 
-  // Get initials from first and last name
-  const getInitials = () => {
-    if (!userProfileData) return null;
-
-    if (userProfileData.profilePicture) return null;
-    return (
-      userProfileData.firstName[0] + userProfileData.lastName[0]
-    ).toUpperCase();
-  };
-
-  // Mock notifications data for user
-  const recentNotifications = [
-    {
-      id: 1,
-      type: "booking",
-      title: "Booking Confirmed",
-      message: "Your booking for El Nido, Palawan has been confirmed!",
-      timestamp: "2 hours ago",
-      read: false,
-    },
-    {
-      id: 2,
-      type: "itinerary",
-      title: "Itinerary Ready",
-      message: "Your customized itinerary for Banaue is now available",
-      timestamp: "5 hours ago",
-      read: false,
-    },
-    {
-      id: 3,
-      type: "reminder",
-      title: "Trip Reminder",
-      message: "Your trip to Palawan starts in 7 days",
-      timestamp: "1 day ago",
-      read: true,
-    },
-  ];
-
-  const unreadCount = recentNotifications.filter((n) => !n.read).length;
+  // Calculate unread count from real API data
+  const unreadCount =
+    notificationsResponse?.data?.items.filter((n) => !n.isRead).length || 0;
 
   // Close menus when clicking outside
   useEffect(() => {
@@ -217,7 +214,7 @@ export function UserSidebar({
             : "-translate-x-full lg:translate-x-0"
         }`}
       >
-        {showSkeleton && <SidebarSkeleton />}
+        {profileDataIsLoading && <SidebarSkeleton />}
 
         {/* Mountain Logo Brand Button with Side Menu */}
         <div className="relative" ref={sideMenuRef}>
@@ -231,24 +228,6 @@ export function UserSidebar({
           >
             <img src={bondVoyage} alt="Bond Voyage" />
           </button>
-
-          {/* Side Switch Menu Overlay */}
-          {showSideMenu && (
-            <div className="absolute left-20 top-0 ml-3 w-56 bg-card border border-border rounded-xl shadow-lg overflow-hidden z-50 animate-in fade-in slide-in-from-left-2 duration-200">
-              <button
-                onClick={handleSwitchToAdmin}
-                className="w-full px-4 py-3 flex items-center gap-3 hover:bg-accent transition-colors"
-              >
-                <ArrowLeftRight
-                  className="w-5 h-5 text-primary"
-                  strokeWidth={2}
-                />
-                <span className="text-sm text-card-foreground">
-                  Switch to Admin Side
-                </span>
-              </button>
-            </div>
-          )}
         </div>
 
         {/* Navigation Menu Items */}
@@ -372,8 +351,8 @@ export function UserSidebar({
 
             {/* Notification Overlay */}
             {showNotificationMenu && (
-              <div className="fixed bottom-3 left-24 w-96 max-w-[calc(100vw-6rem)] bg-card/80 backdrop-blur-xl rounded-2xl shadow-[0_8px_32px_rgba(10,122,255,0.12),0_2px_8px_rgba(0,0,0,0.08)] border border-border/50 z-[200] overflow-hidden">
-                <div className="p-5 border-b border-border/50 bg-gradient-to-br from-primary/5 to-accent/5">
+              <div className="fixed bottom-3 left-24 w-96 max-w-[calc(100vw-6rem)] bg-card/80 backdrop-blur-xl rounded-2xl shadow-[0_8px_32px_rgba(10,122,255,0.12),0_2px_8px_rgba(0,0,0,0.08)] border border-border/50 z-200 overflow-hidden">
+                <div className="p-5 border-b border-border/50 bg-linear-to-br from-primary/5 to-accent/5">
                   <div className="flex items-center justify-between">
                     <div>
                       <h3 className="text-base text-popover-foreground font-semibold">
@@ -392,32 +371,33 @@ export function UserSidebar({
                   </div>
                 </div>
 
-                <div className="max-h-[400px] overflow-y-auto">
-                  {recentNotifications.map((notification) => (
-                    <button
-                      key={notification.id}
-                      className="w-full p-4 hover:bg-accent/30 transition-colors border-b border-border/30 text-left"
-                    >
-                      <div className="flex items-start gap-3">
-                        <div
-                          className={`w-2 h-2 rounded-full mt-2 flex-shrink-0 ${
-                            notification.read ? "bg-muted" : "bg-primary"
-                          }`}
-                        />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-popover-foreground truncate">
-                            {notification.title}
-                          </p>
-                          <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
-                            {notification.message}
-                          </p>
-                          <p className="text-xs text-muted-foreground/60 mt-1">
-                            {notification.timestamp}
-                          </p>
+                <div className="max-h-100 overflow-y-auto">
+                  {notificationsResponse?.data &&
+                    notificationsResponse?.data?.items.map((notification) => (
+                      <button
+                        key={notification.id}
+                        className="w-full p-4 hover:bg-accent/30 transition-colors border-b border-border/30 text-left"
+                      >
+                        <div className="flex items-start gap-3">
+                          <div
+                            className={`w-2 h-2 rounded-full mt-2 shrink-0 ${
+                              notification.isRead ? "bg-muted" : "bg-primary"
+                            }`}
+                          />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-popover-foreground truncate">
+                              {notification.title}
+                            </p>
+                            <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                              {notification.message}
+                            </p>
+                            <p className="text-xs text-muted-foreground/60 mt-1">
+                              {notification.createdAt}
+                            </p>
+                          </div>
                         </div>
-                      </div>
-                    </button>
-                  ))}
+                      </button>
+                    ))}
                 </div>
 
                 <div className="p-3 border-t border-border/50 bg-muted/20">
@@ -439,30 +419,36 @@ export function UserSidebar({
           <div className="relative" ref={userMenuRef}>
             <button
               onClick={() => setShowUserMenu(!showUserMenu)}
-              className="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-lg transition-all duration-200 hover:scale-105 overflow-hidden"
+              className="w-12 h-12 rounded-full bg-linear-to-br from-primary to-accent flex items-center justify-center shadow-lg transition-all duration-200 hover:scale-105 overflow-hidden"
             >
-              {userProfileData && userProfileData.profilePicture ? (
+              {profileData && profileData.avatarUrl ? (
                 <img
-                  src={userProfileData.profilePicture}
+                  src={profileData.avatarUrl}
                   alt="Profile"
                   className="w-full h-full object-cover"
                 />
               ) : (
                 <span className="text-white text-lg font-semibold">
-                  {getInitials()}
+                  <span className="text-white text-lg font-semibold">
+                    {profileData.firstName && profileData.lastName
+                      ? getInitials(
+                          `${profileData.firstName} ${profileData.lastName}`
+                        )
+                      : "?"}
+                  </span>
                 </span>
               )}
             </button>
 
             {/* User Menu Overlay*/}
             {showUserMenu && (
-              <div className="fixed bottom-3 left-24 w-72 max-w-[calc(100vw-6rem)] bg-card/80 backdrop-blur-xl rounded-2xl shadow-[0_8px_32px_rgba(10,122,255,0.12),0_2px_8px_rgba(0,0,0,0.08)] border border-border/50 z-[200] overflow-hidden">
-                <div className="p-5 border-b border-border/50 bg-gradient-to-br from-primary/5 to-accent/5">
+              <div className="fixed bottom-3 left-24 w-72 max-w-[calc(100vw-6rem)] bg-card/80 backdrop-blur-xl rounded-2xl shadow-[0_8px_32px_rgba(10,122,255,0.12),0_2px_8px_rgba(0,0,0,0.08)] border border-border/50 z-200 overflow-hidden">
+                <div className="p-5 border-b border-border/50 bg-linear-to-br from-primary/5 to-accent/5">
                   <div className="flex items-center gap-4">
-                    <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-md overflow-hidden">
-                      {userProfileData && userProfileData.profilePicture ? (
+                    <div className="w-14 h-14 rounded-xl bg-linear-to-br from-primary to-accent flex items-center justify-center shadow-md overflow-hidden">
+                      {profileData && profileData.avatarUrl ? (
                         <img
-                          src={userProfileData.profilePicture}
+                          src={profileData.avatarUrl}
                           alt="Profile"
                           className="w-full h-full object-cover"
                         />
@@ -472,10 +458,11 @@ export function UserSidebar({
                     </div>
                     <div className="flex-1">
                       <h3 className="text-base text-popover-foreground">
-                        {userProfileData.firstName} {userProfileData.lastName}
+                        {profileData.firstName || "User"}{" "}
+                        {profileData.lastName || ""}
                       </h3>
                       <p className="text-sm text-muted-foreground">
-                        {userProfileData.email}
+                        {profileData.email}
                       </p>
                     </div>
                   </div>
@@ -552,11 +539,11 @@ export function UserSidebar({
         {showThemeMenu && (
           <div
             ref={themeMenuRef}
-            className="fixed bottom-3 left-24 lg:left-[400px] w-80 max-w-[calc(100vw-6rem)] bg-card/80 backdrop-blur-xl rounded-2xl shadow-[0_8px_32px_rgba(10,122,255,0.12),0_2px_8px_rgba(0,0,0,0.08)] border border-border/50 z-[200] overflow-hidden"
+            className="fixed bottom-3 left-24 lg:left-100 w-80 max-w-[calc(100vw-6rem)] bg-card/80 backdrop-blur-xl rounded-2xl shadow-[0_8px_32px_rgba(10,122,255,0.12),0_2px_8px_rgba(0,0,0,0.08)] border border-border/50 z-200 overflow-hidden"
           >
-            <div className="p-5 border-b border-border/50 bg-gradient-to-br from-warning/5 to-warning/10">
+            <div className="p-5 border-b border-border/50 bg-linear-to-br from-warning/5 to-warning/10">
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-warning to-warning/80 flex items-center justify-center shadow-md">
+                <div className="w-12 h-12 rounded-xl bg-linear-to-br from-warning to-warning/80 flex items-center justify-center shadow-md">
                   {currentTheme === "dark" ? (
                     <Moon className="w-6 h-6 text-white" strokeWidth={2} />
                   ) : (

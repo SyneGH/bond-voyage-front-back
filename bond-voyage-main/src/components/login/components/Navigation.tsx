@@ -3,8 +3,14 @@
 import { useState, useEffect } from "react";
 import { Menu, X, Sun } from "lucide-react";
 import { Button } from "./ui/button";
-import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetDescription } from "./ui/sheet";
-import logoImage from "../assets/21212dac6efafd12a8aea1483228a3725c3d0aa9.png"
+import {
+  Sheet,
+  SheetContent,
+  SheetTrigger,
+  SheetTitle,
+  SheetDescription,
+} from "./ui/sheet";
+import logoImage from "../assets/21212dac6efafd12a8aea1483228a3725c3d0aa9.png";
 
 interface NavigationProps {
   onLoginClick: () => void;
@@ -46,12 +52,12 @@ export function Navigation({ onLoginClick, onSignUpClick }: NavigationProps) {
       }`}
       style={{ height: "64px" }}
     >
-      <div className="max-w-[1280px] mx-auto px-4 md:px-16 h-full flex items-center justify-between">
+      <div className="max-w-7xl mx-auto px-4 md:px-16 h-full flex items-center justify-between">
         {/* Logo */}
         <div className="flex items-center">
-          <img 
-            src={logoImage} 
-            alt="BondVoyage" 
+          <img
+            src={logoImage}
+            alt="BondVoyage"
             className="h-10"
             style={{ width: "auto" }}
           />
@@ -63,8 +69,12 @@ export function Navigation({ onLoginClick, onSignUpClick }: NavigationProps) {
             <button
               key={link.label}
               onClick={() => scrollToSection(link.href)}
-              className="transition-colors duration-200 hover:text-[var(--ocean-blue)]"
-              style={{ fontSize: "15px", fontWeight: 500, color: "var(--charcoal)" }}
+              className="transition-colors duration-200 hover:text-(--ocean-blue)"
+              style={{
+                fontSize: "15px",
+                fontWeight: 500,
+                color: "var(--charcoal)",
+              }}
             >
               {link.label}
             </button>
@@ -75,15 +85,24 @@ export function Navigation({ onLoginClick, onSignUpClick }: NavigationProps) {
         <div className="hidden md:flex items-center gap-4">
           <button
             onClick={onLoginClick}
-            className="transition-colors duration-200 hover:text-[var(--ocean-blue)]"
-            style={{ fontSize: "14px", fontWeight: 500, color: "var(--charcoal)" }}
+            className="transition-colors duration-200 hover:text-(--ocean-blue)"
+            style={{
+              fontSize: "14px",
+              fontWeight: 500,
+              color: "var(--charcoal)",
+            }}
           >
             Login
           </button>
           <Button
             onClick={onSignUpClick}
-            className="bg-[var(--ocean-blue)] hover:bg-[var(--sky-blue)] text-white shadow-md hover:shadow-lg transition-all duration-200 hover:scale-[1.02]"
-            style={{ fontSize: "14px", fontWeight: 500, padding: "12px 24px", borderRadius: "8px" }}
+            className="bg-(--ocean-blue) hover:bg-(--sky-blue) text-white shadow-md hover:shadow-lg transition-all duration-200 hover:scale-[1.02]"
+            style={{
+              fontSize: "14px",
+              fontWeight: 500,
+              padding: "12px 24px",
+              borderRadius: "8px",
+            }}
           >
             Get Started
           </Button>
@@ -96,7 +115,7 @@ export function Navigation({ onLoginClick, onSignUpClick }: NavigationProps) {
               <Menu className="w-6 h-6" />
             </Button>
           </SheetTrigger>
-          <SheetContent side="right" className="w-[300px]">
+          <SheetContent side="right" className="w-75">
             <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
             <SheetDescription className="sr-only">
               Access BondVoyage navigation links and account options
@@ -106,8 +125,12 @@ export function Navigation({ onLoginClick, onSignUpClick }: NavigationProps) {
                 <button
                   key={link.label}
                   onClick={() => scrollToSection(link.href)}
-                  className="text-left transition-colors duration-200 hover:text-[var(--ocean-blue)]"
-                  style={{ fontSize: "16px", fontWeight: 500, color: "var(--charcoal)" }}
+                  className="text-left transition-colors duration-200 hover:text-(--ocean-blue)"
+                  style={{
+                    fontSize: "16px",
+                    fontWeight: 500,
+                    color: "var(--charcoal)",
+                  }}
                 >
                   {link.label}
                 </button>
@@ -118,8 +141,12 @@ export function Navigation({ onLoginClick, onSignUpClick }: NavigationProps) {
                     onLoginClick();
                     setIsOpen(false);
                   }}
-                  className="w-full text-left transition-colors duration-200 hover:text-[var(--ocean-blue)]"
-                  style={{ fontSize: "14px", fontWeight: 500, color: "var(--charcoal)" }}
+                  className="w-full text-left transition-colors duration-200 hover:text-(--ocean-blue)"
+                  style={{
+                    fontSize: "14px",
+                    fontWeight: 500,
+                    color: "var(--charcoal)",
+                  }}
                 >
                   Login
                 </button>
@@ -128,7 +155,7 @@ export function Navigation({ onLoginClick, onSignUpClick }: NavigationProps) {
                     onSignUpClick();
                     setIsOpen(false);
                   }}
-                  className="w-full bg-[var(--ocean-blue)] hover:bg-[var(--sky-blue)] text-white"
+                  className="w-full bg-(--ocean-blue) hover:bg-(--sky-blue) text-white"
                   style={{ fontSize: "14px", fontWeight: 500 }}
                 >
                   Get Started

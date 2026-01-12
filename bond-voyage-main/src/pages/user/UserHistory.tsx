@@ -1,13 +1,22 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Archive, BookOpen, Briefcase, FileCheck, ClipboardList } from "lucide-react";
+import {
+  Archive,
+  BookOpen,
+  Briefcase,
+  FileCheck,
+  ClipboardList,
+  Loader2,
+  AlertCircle,
+} from "lucide-react";
 import { ContentCard } from "../../components/ContentCard";
 import { StatCard } from "../../components/StatCard";
 import { BookingListCard } from "../../components/BookingListCard";
 import { Pagination } from "../../components/Pagination";
 import { FAQAssistant } from "../../components/FAQAssistant";
+import { useMyBookings } from "../../hooks/useBookings";
 
-interface CompletedTrip {
+interface TransformedTrip {
   id: string;
   customer: string;
   email: string;
@@ -15,8 +24,6 @@ interface CompletedTrip {
   destination: string;
   dates: string;
   amount: string;
-  rating?: number;
-  image: string;
   travelers: number;
   bookingType: "Standard" | "Customized" | "Requested";
   status: "completed" | "cancelled";
@@ -29,185 +36,100 @@ interface CompletedTrip {
 export function UserHistory() {
   const navigate = useNavigate();
   const [currentPage, setCurrentPage] = useState(1);
-  const [activeTab, setActiveTab] = useState<"completed" | "cancelled">("completed");
-  const [selectedTypeFilter, setSelectedTypeFilter] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<"completed" | "cancelled">(
+    "completed"
+  );
+  const [selectedTypeFilter, setSelectedTypeFilter] = useState<string | null>(
+    null
+  );
   const itemsPerPage = 6;
 
-  const completedTrips: CompletedTrip[] = [
-    {
-      id: "BV-2024-098",
-      customer: "Maria Santos",
-      email: "maria.santos@email.com",
-      mobile: "+63 917 123 4567",
-      destination: "Boracay, Aklan",
-      dates: "August 10, 2024 – August 15, 2024",
-      amount: "₱75,000",
-      travelers: 4,
-      bookingType: "Standard",
-      status: "completed",
-      bookedDate: "July 15, 2024",
-      completedDate: "August 16, 2024",
-      image: "https://images.unsplash.com/photo-1675760134774-0d6972b51e32",
-    },
-    {
-      id: "BV-2024-087",
-      customer: "Maria Santos",
-      email: "maria.santos@email.com",
-      mobile: "+63 917 123 4567",
-      destination: "Puerto Princesa, Palawan",
-      dates: "July 5, 2024 – July 9, 2024",
-      amount: "₱45,000",
-      travelers: 2,
-      bookingType: "Customized",
-      status: "completed",
-      bookedDate: "June 10, 2024",
-      completedDate: "July 10, 2024",
-      image: "https://images.unsplash.com/photo-1632307918787-8cb52566dd35",
-    },
-    {
-      id: "BV-2024-076",
-      customer: "Maria Santos",
-      email: "maria.santos@email.com",
-      mobile: "+63 917 123 4567",
-      destination: "Baguio City, Benguet",
-      dates: "June 15, 2024 – June 18, 2024",
-      amount: "₱28,500",
-      travelers: 3,
-      bookingType: "Standard",
-      status: "completed",
-      bookedDate: "May 20, 2024",
-      completedDate: "June 19, 2024",
-      image: "https://images.unsplash.com/photo-1677215552516-1f2a2aa46915",
-    },
-    {
-      id: "BV-2024-065",
-      customer: "Maria Santos",
-      email: "maria.santos@email.com",
-      mobile: "+63 917 123 4567",
-      destination: "Siargao Island, Surigao del Norte",
-      dates: "May 10, 2024 – May 15, 2024",
-      amount: "₱58,000",
-      travelers: 2,
-      bookingType: "Requested",
-      status: "completed",
-      bookedDate: "April 5, 2024",
-      completedDate: "May 16, 2024",
-      image: "https://images.unsplash.com/photo-1583416750470-965b2707b355",
-    },
-    {
-      id: "BV-2024-054",
-      customer: "Maria Santos",
-      email: "maria.santos@email.com",
-      mobile: "+63 917 123 4567",
-      destination: "Vigan, Ilocos Sur",
-      dates: "April 20, 2024 – April 23, 2024",
-      amount: "₱32,000",
-      travelers: 3,
-      bookingType: "Standard",
-      status: "completed",
-      bookedDate: "March 15, 2024",
-      completedDate: "April 24, 2024",
-      image: "https://images.unsplash.com/photo-1601991956120-c19c7e5b5f02",
-    },
-    {
-      id: "BV-2024-043",
-      customer: "Maria Santos",
-      email: "maria.santos@email.com",
-      mobile: "+63 917 123 4567",
-      destination: "Batanes Islands",
-      dates: "March 10, 2024 – March 16, 2024",
-      amount: "₱95,000",
-      travelers: 2,
-      bookingType: "Customized",
-      status: "completed",
-      bookedDate: "February 1, 2024",
-      completedDate: "March 17, 2024",
-      image: "https://images.unsplash.com/photo-1552832230-c0197dd311b5",
-    },
-    {
-      id: "BV-2024-032",
-      customer: "Maria Santos",
-      email: "maria.santos@email.com",
-      mobile: "+63 917 123 4567",
-      destination: "Coron, Palawan",
-      dates: "February 14, 2024 – February 18, 2024",
-      amount: "₱52,000",
-      travelers: 4,
-      bookingType: "Standard",
-      status: "completed",
-      bookedDate: "January 10, 2024",
-      completedDate: "February 19, 2024",
-      image: "https://images.unsplash.com/photo-1606983340126-99ab4feaa64a",
-    },
-    {
-      id: "BV-2024-021",
-      customer: "Maria Santos",
-      email: "maria.santos@email.com",
-      mobile: "+63 917 123 4567",
-      destination: "Davao City, Davao del Sur",
-      dates: "January 20, 2024 – January 24, 2024",
-      amount: "₱38,500",
-      travelers: 3,
-      bookingType: "Requested",
-      status: "completed",
-      bookedDate: "December 15, 2023",
-      completedDate: "January 25, 2024",
-      image: "https://images.unsplash.com/photo-1573790387788-16b7174e6303",
-    },
-  ];
+  // API query params
+  const [queryParams, setQueryParams] = useState({
+    page: 1,
+    limit: 6,
+    status: "COMPLETED" as "COMPLETED" | "CANCELLED",
+  });
 
-  const cancelledTrips: CompletedTrip[] = [
-    {
-      id: "BV-2024-089",
-      customer: "Maria Santos",
-      email: "maria.santos@email.com",
-      mobile: "+63 917 123 4567",
-      destination: "Sagada, Mountain Province",
-      dates: "September 1, 2024 – September 5, 2024",
-      amount: "₱42,000",
-      travelers: 2,
-      bookingType: "Standard",
-      status: "cancelled",
-      bookedDate: "August 1, 2024",
-      cancelledDate: "August 20, 2024",
-      cancellationReason: "Personal emergency - family matter that required immediate attention",
-      image: "https://images.unsplash.com/photo-1578836537282-3171d77f8632",
-    },
-    {
-      id: "BV-2024-067",
-      customer: "Maria Santos",
-      email: "maria.santos@email.com",
-      mobile: "+63 917 123 4567",
-      destination: "Cebu City, Cebu",
-      dates: "July 25, 2024 – July 28, 2024",
-      amount: "₱35,000",
-      travelers: 3,
-      bookingType: "Customized",
-      status: "cancelled",
-      bookedDate: "June 20, 2024",
-      cancelledDate: "July 10, 2024",
-      cancellationReason: "Change in work schedule - unexpected business commitment",
-      image: "https://images.unsplash.com/photo-1573808645321-beaa7ab67839",
-    },
-  ];
+  // Fetch bookings with server-side filtering
+  const {
+    data: bookingsData,
+    isLoading,
+    isError,
+    refetch,
+  } = useMyBookings(queryParams);
 
-  const allTrips = activeTab === "completed" ? completedTrips : cancelledTrips;
-  
-  // Apply booking type filter
-  const filteredTrips = selectedTypeFilter 
-    ? allTrips.filter(t => t.bookingType === selectedTypeFilter)
-    : allTrips;
-  
-  // Calculate paginated trips
-  const indexOfLastTrip = currentPage * itemsPerPage;
-  const indexOfFirstTrip = indexOfLastTrip - itemsPerPage;
-  const currentTrips = filteredTrips.slice(indexOfFirstTrip, indexOfLastTrip);
+  // Transform API data
+  const transformBooking = (apiBooking: any): TransformedTrip => {
+    const totalAmount =
+      parseFloat(apiBooking.total?.replace(/[₱,]/g, "") || apiBooking.total) ||
+      0;
 
-  // Calculate stats based on active tab
-  const statusTripsCount = allTrips.length;
-  const customizedCount = allTrips.filter(t => t.bookingType === "Customized").length;
-  const standardCount = allTrips.filter(t => t.bookingType === "Standard").length;
-  const requestedCount = allTrips.filter(t => t.bookingType === "Requested").length;
+    const dates = apiBooking.dates?.split(" - ") || [];
+    const startDate = dates[0] || new Date().toISOString().split("T")[0];
+    const endDate = dates[1] || startDate;
+
+    return {
+      id: apiBooking.id,
+      customer: apiBooking.customer || "Unknown Customer",
+      email: apiBooking.email || "",
+      mobile: apiBooking.mobile || "N/A",
+      destination: apiBooking.destination,
+      dates: apiBooking.dates,
+      amount: apiBooking.total,
+      travelers: apiBooking.travelers,
+      bookingType: apiBooking.bookingType,
+      status:
+        apiBooking.statusBadges === "COMPLETED" ? "completed" : "cancelled",
+      bookedDate: new Date(apiBooking.bookedDate).toLocaleDateString(),
+      completedDate: apiBooking.completedDate
+        ? new Date(apiBooking.completedDate).toLocaleDateString()
+        : undefined,
+      cancelledDate: apiBooking.cancelledDate
+        ? new Date(apiBooking.cancelledDate).toLocaleDateString()
+        : undefined,
+      cancellationReason: apiBooking.cancellationReason,
+    };
+  };
+
+  const bookings = bookingsData?.data?.map(transformBooking) || [];
+
+  // Build API query params based on filters and active tab
+  useEffect(() => {
+    const params: any = {
+      page: currentPage,
+      limit: itemsPerPage,
+      status: activeTab === "completed" ? "COMPLETED" : "CANCELLED",
+    };
+
+    // Booking type filter
+    if (selectedTypeFilter) {
+      params.type = selectedTypeFilter.toUpperCase();
+    }
+
+    setQueryParams(params);
+  }, [currentPage, selectedTypeFilter, activeTab]);
+
+  // Apply booking type filter (client-side for consistency with existing UI)
+  const filteredTrips = selectedTypeFilter
+    ? bookings.filter((t) => t.bookingType === selectedTypeFilter)
+    : bookings;
+
+  // Use API pagination
+  const totalItems = bookingsData?.meta?.total || 0;
+  const totalPages = bookingsData?.meta?.totalPages || 1;
+
+  // Calculate stats based on filtered bookings
+  const statusTripsCount = filteredTrips.length;
+  const customizedCount = filteredTrips.filter(
+    (t) => t.bookingType === "Customized"
+  ).length;
+  const standardCount = filteredTrips.filter(
+    (t) => t.bookingType === "Standard"
+  ).length;
+  const requestedCount = filteredTrips.filter(
+    (t) => t.bookingType === "Requested"
+  ).length;
 
   const handleViewDetails = (bookingId: string) => {
     navigate(`/user/history/${bookingId}`);
@@ -221,6 +143,13 @@ export function UserHistory() {
       setSelectedTypeFilter(type);
     }
     setCurrentPage(1);
+  };
+
+  // Handle tab change
+  const handleTabChange = (tab: "completed" | "cancelled") => {
+    setActiveTab(tab);
+    setCurrentPage(1);
+    setSelectedTypeFilter(null);
   };
 
   const getStatusColor = (status: string) => {
@@ -258,31 +187,53 @@ export function UserHistory() {
     }
   };
 
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="w-8 h-8 animate-spin text-[#0A7AFF]" />
+      </div>
+    );
+  }
+
+  // Error state
+  if (isError) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64 text-center">
+        <AlertCircle className="w-12 h-12 text-[#FF6B6B] mb-4" />
+        <h3 className="text-lg font-semibold text-[#1A2B4F] mb-2">
+          Failed to load history
+        </h3>
+        <p className="text-sm text-[#64748B] mb-4">Please try again later</p>
+        <button
+          onClick={() => refetch()}
+          className="px-4 py-2 bg-[#0A7AFF] text-white rounded-lg hover:bg-[#0865CC]"
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div>
       {/* Tabs */}
       <div className="flex items-center gap-1 mb-6 border-b-2 border-[#E5E7EB]">
-        <button 
-          onClick={() => {
-            setActiveTab("completed");
-            setCurrentPage(1);
-          }}
+        <button
+          onClick={() => handleTabChange("completed")}
           className={`px-5 h-11 text-sm transition-colors ${
-            activeTab === "completed" 
-              ? "font-semibold text-[#10B981] border-b-[3px] border-[#10B981] -mb-[2px]" 
+            activeTab === "completed"
+              ? "font-semibold text-[#10B981] border-b-[3px] border-[#10B981] -mb-[2px]"
               : "font-medium text-[#64748B] hover:text-[#10B981] hover:bg-[rgba(16,185,129,0.05)]"
           }`}
         >
           Completed
         </button>
-        <button 
-          onClick={() => {
-            setActiveTab("cancelled");
-            setCurrentPage(1);
-          }}
+        <button
+          onClick={() => handleTabChange("cancelled")}
           className={`px-5 h-11 text-sm transition-colors ${
-            activeTab === "cancelled" 
-              ? "font-semibold text-[#FF6B6B] border-b-[3px] border-[#FF6B6B] -mb-[2px]" 
+            activeTab === "cancelled"
+              ? "font-semibold text-[#FF6B6B] border-b-[3px] border-[#FF6B6B] -mb-[2px]"
               : "font-medium text-[#64748B] hover:text-[#FF6B6B] hover:bg-[rgba(255,107,107,0.05)]"
           }`}
         >
@@ -292,17 +243,25 @@ export function UserHistory() {
 
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6">
-        <div onClick={() => handleStatCardClick(null)} className="cursor-pointer">
+        <div
+          onClick={() => handleStatCardClick(null)}
+          className="cursor-pointer"
+        >
           <StatCard
             icon={BookOpen}
-            label={activeTab === "completed" ? "Completed Trips" : "Cancelled Trips"}
+            label={
+              activeTab === "completed" ? "Completed Trips" : "Cancelled Trips"
+            }
             value={statusTripsCount.toString()}
             gradientFrom={activeTab === "completed" ? "#10B981" : "#FF6B6B"}
             gradientTo={activeTab === "completed" ? "#14B8A6" : "#FF8C8C"}
             selected={selectedTypeFilter === null}
           />
         </div>
-        <div onClick={() => handleStatCardClick("Customized")} className="cursor-pointer">
+        <div
+          onClick={() => handleStatCardClick("Customized")}
+          className="cursor-pointer"
+        >
           <StatCard
             icon={Briefcase}
             label="Customized"
@@ -312,7 +271,10 @@ export function UserHistory() {
             selected={selectedTypeFilter === "Customized"}
           />
         </div>
-        <div onClick={() => handleStatCardClick("Standard")} className="cursor-pointer">
+        <div
+          onClick={() => handleStatCardClick("Standard")}
+          className="cursor-pointer"
+        >
           <StatCard
             icon={FileCheck}
             label="Standard"
@@ -322,7 +284,10 @@ export function UserHistory() {
             selected={selectedTypeFilter === "Standard"}
           />
         </div>
-        <div onClick={() => handleStatCardClick("Requested")} className="cursor-pointer">
+        <div
+          onClick={() => handleStatCardClick("Requested")}
+          className="cursor-pointer"
+        >
           <StatCard
             icon={ClipboardList}
             label="Requested"
@@ -335,8 +300,10 @@ export function UserHistory() {
       </div>
 
       {/* Trips List */}
-      <ContentCard 
-        title={`${activeTab === "completed" ? "Completed" : "Cancelled"} Trips (${filteredTrips.length})`}
+      <ContentCard
+        title={`${
+          activeTab === "completed" ? "Completed" : "Cancelled"
+        } Trips (${totalItems})`}
         icon={Archive}
       >
         {filteredTrips.length === 0 ? (
@@ -354,7 +321,7 @@ export function UserHistory() {
         ) : (
           <>
             <div className="space-y-4">
-              {currentTrips.map((trip) => (
+              {filteredTrips.map((trip) => (
                 <BookingListCard
                   key={trip.id}
                   booking={{
@@ -373,11 +340,22 @@ export function UserHistory() {
                   variant={trip.status === "cancelled" ? "rejected" : "default"}
                   statusBadge={
                     <>
-                      <span className={`inline-flex px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(trip.status)}`}>
-                        {getStatusIcon(trip.status)} {trip.status === "completed" ? "Completed" : "Cancelled"}
+                      <span
+                        className={`inline-flex px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(
+                          trip.status
+                        )}`}
+                      >
+                        {getStatusIcon(trip.status)}{" "}
+                        {trip.status === "completed"
+                          ? "Completed"
+                          : "Cancelled"}
                       </span>
                       {trip.bookingType && (
-                        <span className={`inline-flex px-3 py-1 rounded-full text-xs font-medium border ${getBookingTypeColor(trip.bookingType)}`}>
+                        <span
+                          className={`inline-flex px-3 py-1 rounded-full text-xs font-medium border ${getBookingTypeColor(
+                            trip.bookingType
+                          )}`}
+                        >
                           {trip.bookingType}
                         </span>
                       )}
@@ -388,11 +366,11 @@ export function UserHistory() {
             </div>
 
             {/* Pagination */}
-            {filteredTrips.length > itemsPerPage && (
+            {totalItems > itemsPerPage && (
               <div className="mt-6">
                 <Pagination
                   currentPage={currentPage}
-                  totalPages={Math.ceil(filteredTrips.length / itemsPerPage)}
+                  totalPages={totalPages}
                   onPageChange={setCurrentPage}
                 />
               </div>

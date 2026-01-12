@@ -1,7 +1,21 @@
-import { Search, Filter, Download, FileText, FileSpreadsheet, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import {
+  Search,
+  Filter,
+  Download,
+  FileText,
+  FileSpreadsheet,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
+} from "lucide-react";
 import { ReactNode } from "react";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "./ui/dropdown-menu";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "./ui/dropdown-menu";
 import { Button } from "./ui/button";
 
 export type SortOrder = "none" | "newest" | "oldest";
@@ -80,27 +94,38 @@ export function SearchFilterToolbar({
             <DropdownMenuTrigger asChild>
               <button
                 className={`h-11 px-3 sm:px-4 rounded-xl border border-[#E5E7EB] dark:border-[#2A3441] bg-white dark:bg-[#2596be] hover:bg-[#F8FAFB] dark:hover:bg-[#1f7a9e] flex items-center gap-2 text-sm text-[#334155] dark:text-white transition-colors flex-1 sm:flex-initial ${
-                  sortOrder !== "none" ? "border-[#0A7AFF] bg-[rgba(10,122,255,0.05)] dark:bg-[#1f7a9e]" : ""
+                  sortOrder !== "none"
+                    ? "border-[#0A7AFF] bg-[rgba(10,122,255,0.05)] dark:bg-[#1f7a9e]"
+                    : ""
                 }`}
               >
                 {getSortIcon()}
                 <span className="hidden sm:inline">{getSortLabel()}</span>
                 <span className="sm:hidden">Sort</span>
               </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-48">
-            <DropdownMenuItem onClick={() => onSortChange("none")} className="cursor-pointer">
-              <ArrowUpDown className="w-4 h-4 mr-2 text-[#64748B]" />
-              Default Order
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => onSortChange("newest")} className="cursor-pointer">
-              <ArrowDown className="w-4 h-4 mr-2 text-[#0A7AFF]" />
-              Newest First
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => onSortChange("oldest")} className="cursor-pointer">
-              <ArrowUp className="w-4 h-4 mr-2 text-[#10B981]" />
-              Oldest First
-            </DropdownMenuItem>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuItem
+                onClick={() => onSortChange("none")}
+                className="cursor-pointer"
+              >
+                <ArrowUpDown className="w-4 h-4 mr-2 text-[#64748B]" />
+                Default Order
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => onSortChange("newest")}
+                className="cursor-pointer"
+              >
+                <ArrowDown className="w-4 h-4 mr-2 text-[#0A7AFF]" />
+                Newest First
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => onSortChange("oldest")}
+                className="cursor-pointer"
+              >
+                <ArrowUp className="w-4 h-4 mr-2 text-[#10B981]" />
+                Oldest First
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         )}
@@ -118,9 +143,9 @@ export function SearchFilterToolbar({
                   </span>
                 )}
               </button>
-          </PopoverTrigger>
-          <PopoverContent className="w-80 p-0" align="end">
-            {filterContent}
+            </PopoverTrigger>
+            <PopoverContent className="w-80 p-0" align="end">
+              {filterContent}
             </PopoverContent>
           </Popover>
         )}
@@ -128,26 +153,32 @@ export function SearchFilterToolbar({
         {/* Export Dropdown */}
         {showExport && (
           <DropdownMenu>
-            {!location.pathname.includes('itinerary') && <DropdownMenuTrigger asChild>
-              <button className="h-11 px-3 sm:px-4 rounded-xl border border-[#E5E7EB] dark:border-[#2A3441] bg-white dark:bg-[#2596be] hover:bg-[#F8FAFB] dark:hover:bg-[#1f7a9e] flex items-center gap-2 text-sm text-[#334155] dark:text-white transition-colors flex-1 sm:flex-initial">
-                <Download className="w-4 h-4" />
-                <span className="hidden sm:inline">Export</span>
-              </button>
-            </DropdownMenuTrigger>}
+            {!location.pathname.includes("itinerary") && (
+              <DropdownMenuTrigger asChild>
+                <button className="h-11 px-3 sm:px-4 rounded-xl border border-[#E5E7EB] dark:border-[#2A3441] bg-white dark:bg-[#2596be] hover:bg-[#F8FAFB] dark:hover:bg-[#1f7a9e] flex items-center gap-2 text-sm text-[#334155] dark:text-white transition-colors flex-1 sm:flex-initial">
+                  <Download className="w-4 h-4" />
+                  <span className="hidden sm:inline">Export</span>
+                </button>
+              </DropdownMenuTrigger>
+            )}
             <DropdownMenuContent align="end" className="w-48">
-              <DropdownMenuItem onClick={onExportPDF} className="cursor-pointer">
+              <DropdownMenuItem
+                onClick={onExportPDF}
+                className="cursor-pointer"
+              >
                 <FileText className="w-4 h-4 mr-2 text-[#FF6B6B]" />
                 Export to PDF
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={onExportExcel} className="cursor-pointer">
+              <DropdownMenuItem
+                onClick={onExportExcel}
+                className="cursor-pointer"
+              >
                 <FileSpreadsheet className="w-4 h-4 mr-2 text-[#10B981]" />
                 Export to Excel
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         )}
-
-        
       </div>
     </div>
   );

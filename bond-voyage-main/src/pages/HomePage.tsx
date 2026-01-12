@@ -1,5 +1,5 @@
 import { useState } from "react";
-import "../components/login/components/Navigation"
+import "../components/login/components/Navigation";
 import { Navigation } from "../components/login/components/Navigation";
 import { Hero } from "../components/login/components/Hero";
 import { About } from "../components/login/components/About";
@@ -16,7 +16,8 @@ import { ForgotPasswordModal } from "../components/login/components/ForgotPasswo
 export default function HomePage() {
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [isSignUpModalOpen, setIsSignUpModalOpen] = useState(false);
-  const [isForgotPasswordModalOpen, setIsForgotPasswordModalOpen] = useState(false);
+  const [isForgotPasswordModalOpen, setIsForgotPasswordModalOpen] =
+    useState(false);
 
   const openLoginModal = () => setIsLoginModalOpen(true);
   const closeLoginModal = () => setIsLoginModalOpen(false);
@@ -39,28 +40,26 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen">
-      <Navigation 
-        onLoginClick={openLoginModal} 
+      <Navigation
+        onLoginClick={openLoginModal}
         onSignUpClick={openSignUpModal}
       />
       <Hero onStartPlanningClick={openSignUpModal} />
       <About />
       <Features />
-      <HowItWorks onStartYourTripClick={openSignUpModal} />
-      <Testimonials />
       <Team />
       <Contact />
       <Footer />
-      
-      <LoginModal 
-        isOpen={isLoginModalOpen} 
+
+      <LoginModal
+        isOpen={isLoginModalOpen}
         onClose={closeLoginModal}
         onSwitchToSignUp={switchToSignUp}
         onForgotPassword={openForgotPasswordModal}
       />
-      
-      <SignUpModal 
-        isOpen={isSignUpModalOpen} 
+
+      <SignUpModal
+        isOpen={isSignUpModalOpen}
         onClose={closeSignUpModal}
         onSwitchToLogin={switchToLogin}
       />

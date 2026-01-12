@@ -19,12 +19,16 @@ import {
   ArrowLeftRight,
   LogOut,
 } from "lucide-react";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useSide } from "./SideContext";
 import SidebarSkeleton from "./SidebarSkeleton";
-import { useProfile } from "./ProfileContext";
 import bondVoyage from "../assets/BondVoyage Logo White (logo only).png";
+import { useLogout, useProfile } from "../hooks/useAuth";
+import { User as IUser } from "../types/types";
+import { getInitials } from "../utils/helpers/getInitials";
+import { useNotifications } from "../hooks/useNotifications";
+import { toast } from "sonner";
 
 interface SidebarProps {
   currentTheme: string;
@@ -42,18 +46,39 @@ export function Sidebar({
   const location = useLocation();
   const navigate = useNavigate();
   const { switchSide } = useSide();
-  const { profileData } = useProfile();
+  const { data: profileResponse, isLoading: profileDataIsLoading } =
+    useProfile();
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showNotificationMenu, setShowNotificationMenu] = useState(false);
   const [showThemeMenu, setShowThemeMenu] = useState(false);
   const [showSideMenu, setShowSideMenu] = useState(false);
-  const [showSkeleton, setShowSkeleton] = useState<boolean>(true);
 
-  useEffect(() => {
-    setTimeout(() => {
-      setShowSkeleton(false);
-    }, 3000);
-  }, [setShowSkeleton]);
+  const profileData: IUser = useMemo(() => {
+    return profileResponse?.data?.user
+      ? profileResponse.data.user
+      : {
+          companyName: "",
+          id: "",
+          email: "",
+          firstName: "",
+          lastName: "",
+          phoneNumber: "",
+          role: "USER",
+          avatarUrl: "",
+          middleName: "",
+          mobile: "",
+          isActive: true,
+          createdAt: "",
+          updatedAt: "",
+          lastLogin: "",
+          birthday: "",
+          employeeId: "",
+          customerRating: 0,
+        };
+  }, [profileResponse?.data?.user]);
+
+  const { data: notificationsResponse } = useNotifications();
+  const { mutate: logout } = useLogout();
 
   const menuItems = [
     { id: "/", icon: LayoutDashboard, label: "Home" },
@@ -91,53 +116,20 @@ export function Sidebar({
 
   // Handle logout
   const handleLogout = () => {
-    navigate("/");
-    setShowUserMenu(false);
-    // You can add actual logout logic here
+    logout(undefined, {
+      onSuccess: () => {
+        navigate("/");
+        setShowUserMenu(false);
+      },
+      onError: () => {
+        toast.error("Logout failed. Please try again");
+      },
+    });
   };
 
-  // Get initials from company name
-  const getInitials = () => {
-    if (!profileData) return null;
-
-    if (profileData && profileData.profilePicture) return null;
-    // Extract initials from company name (e.g., "4B's Travel and Tours" -> "4T")
-    const words = profileData.companyName.split(" ");
-    if (words.length >= 2) {
-      return (words[0][0] + words[words.length - 1][0]).toUpperCase();
-    }
-    return profileData.companyName.substring(0, 2).toUpperCase();
-  };
-
-  // Mock notifications data
-  const recentNotifications = [
-    {
-      id: 1,
-      type: "booking",
-      title: "New Booking Request",
-      message: "Juan Dela Cruz requested a customized trip to Boracay",
-      timestamp: "5 minutes ago",
-      read: false,
-    },
-    {
-      id: 2,
-      type: "approval",
-      title: "Booking Approved",
-      message: "Your approval for booking #BV-2024-089 was processed",
-      timestamp: "1 hour ago",
-      read: false,
-    },
-    {
-      id: 3,
-      type: "feedback",
-      title: "New Feedback Received",
-      message: "Maria Santos left a 5-star review for El Nido trip",
-      timestamp: "2 hours ago",
-      read: true,
-    },
-  ];
-
-  const unreadCount = recentNotifications.filter((n) => !n.read).length;
+  const unreadCount = notificationsResponse?.data?.items.filter(
+    (n) => !n.isRead
+  ).length;
 
   // Close menus when clicking outside
   useEffect(() => {
@@ -193,7 +185,7 @@ export function Sidebar({
             : "-translate-x-full lg:translate-x-0"
         }`}
       >
-        {showSkeleton && <SidebarSkeleton />}
+        {!profileData && <SidebarSkeleton />}
 
         {/* Mountain Logo Brand Button with Side Menu */}
         <div className="relative" ref={sideMenuRef}>
@@ -207,24 +199,6 @@ export function Sidebar({
           >
             <img src={bondVoyage} alt="Bond Voyage" />
           </button>
-
-          {/* Side Switch Menu Overlay */}
-          {showSideMenu && (
-            <div className="absolute left-20 top-0 ml-3 w-56 bg-card border border-border rounded-xl shadow-lg overflow-hidden z-50 animate-in fade-in slide-in-from-left-2 duration-200">
-              <button
-                onClick={handleSwitchToUser}
-                className="w-full px-4 py-3 flex items-center gap-3 hover:bg-accent transition-colors"
-              >
-                <ArrowLeftRight
-                  className="w-5 h-5 text-primary"
-                  strokeWidth={2}
-                />
-                <span className="text-sm text-card-foreground">
-                  Switch to User Side
-                </span>
-              </button>
-            </div>
-          )}
         </div>
 
         {/* Navigation Menu Items */}
@@ -304,15 +278,15 @@ export function Sidebar({
                 className="w-5 h-5 text-sidebar-foreground/60 group-hover:animate-[wiggle_0.5s_ease-in-out]"
                 strokeWidth={2.5}
               />
-              {unreadCount > 0 && (
-                <div className="absolute top-2 right-2 w-2.5 h-2.5 bg-destructive rounded-full border-2 border-sidebar" />
-              )}
+              {/* {unreadCount && unreadCount > 0 && (
+                <div className="absolute top-5 right-5 w-2.5 h-2.5 bg-destructive rounded-full border-2 border-sidebar" />
+              )} */}
             </button>
 
             {/* Notification Overlay */}
             {showNotificationMenu && (
-              <div className="fixed bottom-3 left-24 w-96 max-w-[calc(100vw-6rem)] bg-card/80 backdrop-blur-xl rounded-2xl shadow-[0_8px_32px_rgba(10,122,255,0.12),0_2px_8px_rgba(0,0,0,0.08)] border border-border/50 z-[200] overflow-hidden">
-                <div className="p-5 border-b border-border/50 bg-gradient-to-br from-primary/5 to-accent/5">
+              <div className="fixed bottom-3 left-24 w-96 max-w-[calc(100vw-6rem)] bg-card/80 backdrop-blur-xl rounded-2xl shadow-[0_8px_32px_rgba(10,122,255,0.12),0_2px_8px_rgba(0,0,0,0.08)] border border-border/50 z-200 overflow-hidden">
+                <div className="p-5 border-b border-border/50 bg-linear-to-br from-primary/5 to-accent/5">
                   <div className="flex items-center justify-between">
                     <div>
                       <h3 className="text-base text-popover-foreground font-semibold">
@@ -331,32 +305,33 @@ export function Sidebar({
                   </div>
                 </div>
 
-                <div className="max-h-[400px] overflow-y-auto">
-                  {recentNotifications.map((notification) => (
-                    <button
-                      key={notification.id}
-                      className="w-full p-4 hover:bg-accent/30 transition-colors border-b border-border/30 text-left"
-                    >
-                      <div className="flex items-start gap-3">
-                        <div
-                          className={`w-2 h-2 rounded-full mt-2 flex-shrink-0 ${
-                            notification.read ? "bg-muted" : "bg-primary"
-                          }`}
-                        />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-popover-foreground truncate">
-                            {notification.title}
-                          </p>
-                          <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
-                            {notification.message}
-                          </p>
-                          <p className="text-xs text-muted-foreground/60 mt-1">
-                            {notification.timestamp}
-                          </p>
+                <div className="max-h-100 overflow-y-auto">
+                  {notificationsResponse?.data &&
+                    notificationsResponse?.data?.items.map((notification) => (
+                      <button
+                        key={notification.id}
+                        className="w-full p-4 hover:bg-accent/30 transition-colors border-b border-border/30 text-left"
+                      >
+                        <div className="flex items-start gap-3">
+                          <div
+                            className={`w-2 h-2 rounded-full mt-2 shrink-0 ${
+                              notification.isRead ? "bg-muted" : "bg-primary"
+                            }`}
+                          />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-popover-foreground truncate">
+                              {notification.title}
+                            </p>
+                            <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                              {notification.message}
+                            </p>
+                            <p className="text-xs text-muted-foreground/60 mt-1">
+                              {notification.createdAt}
+                            </p>
+                          </div>
                         </div>
-                      </div>
-                    </button>
-                  ))}
+                      </button>
+                    ))}
                 </div>
 
                 <div className="p-3 border-t border-border/50 bg-muted/20">
@@ -378,32 +353,33 @@ export function Sidebar({
           <div className="relative" ref={userMenuRef}>
             <button
               onClick={() => setShowUserMenu(!showUserMenu)}
-              className="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-lg transition-all duration-200 hover:scale-105 overflow-hidden"
+              className="w-12 h-12 rounded-full flex items-center justify-center shadow-lg transition-all duration-200 hover:scale-105 overflow-hidden"
+              style={{ backgroundColor: "#0c83f3" }}
             >
-              {profileData && profileData.profilePicture ? (
+              {profileData && profileData.avatarUrl ? (
                 <img
-                  src={profileData.profilePicture}
+                  src={profileData.avatarUrl}
                   alt="Profile"
-                  className="w-full h-full object-cover rounded-[0px]"
+                  className="w-full h-full object-cover rounded-none"
                 />
               ) : (
                 <span className="text-white text-lg font-semibold">
-                  {getInitials()}
+                  {getInitials(profileData.companyName!)}
                 </span>
               )}
             </button>
 
             {/* User Menu Overlay */}
             {showUserMenu && (
-              <div className="fixed bottom-3 left-24 w-72 max-w-[calc(100vw-6rem)] bg-card/80 backdrop-blur-xl rounded-2xl shadow-[0_8px_32px_rgba(10,122,255,0.12),0_2px_8px_rgba(0,0,0,0.08)] border border-border/50 z-[200] overflow-hidden">
-                <div className="p-5 border-b border-border/50 bg-gradient-to-br from-primary/5 to-accent/5">
+              <div className="fixed bottom-3 left-24 w-72 max-w-[calc(100vw-6rem)] bg-card/80 backdrop-blur-xl rounded-2xl shadow-[0_8px_32px_rgba(10,122,255,0.12),0_2px_8px_rgba(0,0,0,0.08)] border border-border/50 z-200 overflow-hidden">
+                <div className="p-5 border-b border-border/50 bg-linear-to-br from-primary/5 to-accent/5">
                   <div className="flex items-center gap-4">
-                    <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-md overflow-hidden">
-                      {profileData && profileData.profilePicture ? (
+                    <div className="w-14 h-14 rounded-xl bg-linear-to-br from-primary to-accent flex items-center justify-center shadow-md overflow-hidden">
+                      {profileData && profileData.avatarUrl ? (
                         <img
-                          src={profileData.profilePicture}
+                          src={profileData.avatarUrl}
                           alt="Profile"
-                          className="w-full h-full object-cover rounded-[0px]"
+                          className="w-full h-full object-cover rounded-none"
                         />
                       ) : (
                         <User className="w-7 h-7 text-white" strokeWidth={2} />
@@ -491,11 +467,11 @@ export function Sidebar({
         {showThemeMenu && (
           <div
             ref={themeMenuRef}
-            className="fixed bottom-3 left-24 lg:left-[400px] w-80 max-w-[calc(100vw-6rem)] bg-card/80 backdrop-blur-xl rounded-2xl shadow-[0_8px_32px_rgba(10,122,255,0.12),0_2px_8px_rgba(0,0,0,0.08)] border border-border/50 z-[200] overflow-hidden"
+            className="fixed bottom-3 left-24 lg:left-100 w-80 max-w-[calc(100vw-6rem)] bg-card/80 backdrop-blur-xl rounded-2xl shadow-[0_8px_32px_rgba(10,122,255,0.12),0_2px_8px_rgba(0,0,0,0.08)] border border-border/50 z-200 overflow-hidden"
           >
-            <div className="p-5 border-b border-border/50 bg-gradient-to-br from-warning/5 to-warning/10">
+            <div className="p-5 border-b border-border/50 bg-linear-to-br from-warning/5 to-warning/10">
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-warning to-warning/80 flex items-center justify-center shadow-md">
+                <div className="w-12 h-12 rounded-xl bg-linear-to-br from-warning to-warning/80 flex items-center justify-center shadow-md">
                   {currentTheme === "dark" ? (
                     <Moon className="w-6 h-6 text-white" strokeWidth={2} />
                   ) : (

@@ -7,27 +7,35 @@ import { Sparkles, Brain, CalendarCheck } from "lucide-react";
 const valueProps = [
   {
     icon: Sparkles,
-    title: "Simple & Clean",
-    description: "Navigate complex travel planning with an intuitive, beautiful interface designed for everyone.",
+    title: "Effortless Travel Planning",
+    description:
+      "Turn every trip into a smooth experience. From smart itineraries and route optimization to collaborative trip planning, manage every aspect of your travels effortlessly. With AI-powered tools, every trip is easier, smarter, and more enjoyable.",
     iconColor: "var(--ocean-blue)",
   },
   {
     icon: Brain,
-    title: "AI-Powered Intelligence",
-    description: "Let our smart algorithms craft personalized itineraries based on your preferences and budget.",
+    title: "Smart Travel Planning Assistant",
+    description:
+      "Plan smarter with our AI Travel Assistant, which assists in creating day-by-day itineraries and provides expert guidance for every trip. Need help on the go? Our AI-Powered FAQ Assistant delivers instant answers and smart suggestions, especially for navigating system features.",
     iconColor: "var(--golden-hour)",
   },
   {
     icon: CalendarCheck,
-    title: "Stay Organized",
-    description: "Keep all your bookings, documents, and plans in one secure, accessible place.",
+    title: "All-in-One Travel Management",
+    description:
+      "Manage all your trips, bookings, itineraries, and travel plans in one centralized, easy-to-use platform designed for both travelers and administrators. Keep track of every detail, from trip history to feedback, so you always stay in control of your travel experience.",
     iconColor: "var(--jade-green)",
   },
 ];
 
 export function About() {
   return (
-    <section id="about" style={{ background: "linear-gradient(180deg, #F8FAFB 0%, #F8FAFB 100%)" }}>
+    <section
+      id="about"
+      style={{
+        background: "linear-gradient(180deg, #F8FAFB 0%, #F8FAFB 100%)",
+      }}
+    >
       {/* Centered Header Container */}
       <div className="pt-12 md:pt-16 px-4 md:px-16 max-w-[1280px] mx-auto">
         <motion.div
@@ -39,12 +47,23 @@ export function About() {
         >
           <p
             className="uppercase tracking-wider mb-3"
-            style={{ fontSize: "14px", fontWeight: 500, color: "var(--ocean-blue)", letterSpacing: "1.5px" }}
+            style={{
+              fontSize: "14px",
+              fontWeight: 500,
+              color: "var(--ocean-blue)",
+              letterSpacing: "1.5px",
+            }}
           >
             About BondVoyage
           </p>
 
-          <h2 style={{ fontSize: "32px", fontWeight: 600, color: "var(--deep-navy)" }}>
+          <h2
+            style={{
+              fontSize: "32px",
+              fontWeight: 600,
+              color: "var(--deep-navy)",
+            }}
+          >
             Making Travel Planning Simple and Joyful
           </h2>
         </motion.div>
@@ -60,21 +79,33 @@ export function About() {
             viewport={{ once: true }}
             transition={{ duration: 0.6 }}
           >
-            <div className="space-y-5" style={{ fontSize: "16px", lineHeight: 1.8, color: "var(--charcoal)" }}>
+            <div
+              className="space-y-5"
+              style={{
+                fontSize: "16px",
+                lineHeight: 1.8,
+                color: "var(--charcoal)",
+              }}
+            >
               <p>
-                BondVoyage was born from a simple idea: travel planning shouldn't be stressful. Whether you're
-                organizing a weekend getaway or a month-long adventure, we believe the planning process should be as
-                enjoyable as the trip itself.
+                BondVoyage was born from a simple idea: travel planning
+                shouldn't be stressful. Whether you're organizing a weekend
+                getaway or a month-long adventure, we believe the planning
+                process should be as enjoyable as the trip itself.
               </p>
 
               <p>
-                Our platform combines powerful organizational tools with an intuitive interface, making it easy for
-                anyone to create detailed itineraries, manage budgets, and collaborate with travel companions. We're
-                here to handle the logistics so you can focus on the excitement of exploration.
-              </p>
-
-              <p>
-                Join thousands of travelers who have already discovered a better way to plan their adventures.
+                BondVoyage is an all-in-one travel management system that
+                connects travelers and administrators through a smart,
+                centralized platform. It empowers users to seamlessly plan,
+                customize, and manage their trips through AI-assisted
+                itineraries, smart trip generation, and centralized booking
+                tracking. It offers a personalized travel dashboard, trip
+                history, and feedback sharing, while providing administrators
+                with powerful tools for user management, booking approvals,
+                itinerary creation, analytics, and feedback oversight—ensuring a
+                smooth, intelligent, and well-managed travel experience for both
+                travelers and operators.
               </p>
             </div>
           </motion.div>
@@ -87,7 +118,7 @@ export function About() {
             transition={{ duration: 0.6 }}
           >
             <ImageWithFallback
-              src="https://images.unsplash.com/photo-1748256622734-92241ae7b43f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHx0ZWFtJTIwY29sbGFib3JhdGlvbiUyMHdvcmtzcGFjZXxlbnwxfHx8fDE3NTk5MDI4ODV8MA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral"
+              src="bv_home.png"
               alt="Team collaboration"
               className="w-full rounded-2xl shadow-2xl"
             />
@@ -104,13 +135,13 @@ export function About() {
             viewport={{ once: true }}
             transition={{ duration: 0.6 }}
           >
-
             <p
               className="mt-4 mx-auto"
               style={{
                 fontSize: "28px",
                 fontWeight: 600,
-                background: "linear-gradient(135deg, var(--ocean-blue) 0%, var(--tropical-teal) 100%)",
+                background:
+                  "linear-gradient(135deg, var(--ocean-blue) 0%, var(--tropical-teal) 100%)",
                 WebkitBackgroundClip: "text",
                 WebkitTextFillColor: "transparent",
                 backgroundClip: "text",
@@ -137,16 +168,35 @@ export function About() {
                 <div className="flex flex-col items-center text-center">
                   {/* Icon */}
                   <div className="mb-6">
-                    <prop.icon style={{ width: "64px", height: "64px", color: prop.iconColor }} />
+                    <prop.icon
+                      style={{
+                        width: "64px",
+                        height: "64px",
+                        color: prop.iconColor,
+                      }}
+                    />
                   </div>
 
                   {/* Title */}
-                  <h3 style={{ fontSize: "20px", fontWeight: 600, color: "var(--deep-navy)", marginBottom: "12px" }}>
+                  <h3
+                    style={{
+                      fontSize: "20px",
+                      fontWeight: 600,
+                      color: "var(--deep-navy)",
+                      marginBottom: "12px",
+                    }}
+                  >
                     {prop.title}
                   </h3>
 
                   {/* Description */}
-                  <p style={{ fontSize: "15px", color: "var(--slate)", lineHeight: 1.6 }}>
+                  <p
+                    style={{
+                      fontSize: "15px",
+                      color: "var(--slate)",
+                      lineHeight: 1.6,
+                    }}
+                  >
                     {prop.description}
                   </p>
                 </div>

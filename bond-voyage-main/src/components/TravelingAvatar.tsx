@@ -1,8 +1,25 @@
 import { motion, AnimatePresence } from "motion/react";
 import { useState } from "react";
-import { Users, CheckCircle, FileText, MessageSquare, LayoutDashboard, Calendar, Mail, BarChart3 } from "lucide-react";
+import {
+  Users,
+  CheckCircle,
+  FileText,
+  MessageSquare,
+  LayoutDashboard,
+  Calendar,
+  BarChart3,
+  HelpCircle,
+} from "lucide-react";
 
-type ActivityType = "overview" | "users" | "approvals" | "itinerary" | "bookings" | "inquiries" | "feedback" | "analytics";
+type ActivityType =
+  | "overview"
+  | "users"
+  | "approvals"
+  | "itinerary"
+  | "bookings"
+  | "feedback"
+  | "analytics"
+  | "faq";
 
 interface Activity {
   type: ActivityType;
@@ -13,61 +30,61 @@ interface Activity {
 }
 
 const activities: Activity[] = [
-  { 
-    type: "overview", 
-    label: "Dashboard Overview", 
+  {
+    type: "overview",
+    label: "Dashboard Overview",
     sublabel: "Monitoring all activities",
     icon: LayoutDashboard,
-    color: "#0A7AFF" // Ocean Blue
+    color: "#0A7AFF", // Ocean Blue
   },
-  { 
-    type: "users", 
-    label: "Managing Users", 
-    sublabel: "User permissions & access",
+  {
+    type: "analytics",
+    label: "Viewing Analytics",
+    sublabel: "Performance reports",
+    icon: BarChart3,
+    color: "#F59E0B", // Orange
+  },
+  {
+    type: "faq",
+    label: "Managing FAQ",
+    sublabel: "FAQ management",
+    icon: HelpCircle,
+    color: "#10B981", // Jade Green
+  },
+  {
+    type: "users",
+    label: "Managing Users",
+    sublabel: "User details & status",
     icon: Users,
-    color: "#10B981" // Jade Green
+    color: "#EC4899", // Pink
   },
-  { 
-    type: "approvals", 
-    label: "Approving Bookings", 
-    sublabel: "Processing requests",
+  {
+    type: "approvals",
+    label: "Approving Bookings",
+    sublabel: "Approval of Customized Itinerary",
     icon: CheckCircle,
-    color: "#FFB84D" // Golden Hour
+    color: "#FFB84D", // Golden Hour
   },
-  { 
-    type: "itinerary", 
-    label: "Creating Itinerary", 
-    sublabel: "Building travel plans",
+  {
+    type: "itinerary",
+    label: "Creating Itinerary",
+    sublabel: "Standard and Requested itineraries",
     icon: FileText,
-    color: "#14B8A6" // Tropical Teal
+    color: "#14B8A6", // Tropical Teal
   },
-  { 
-    type: "bookings", 
-    label: "Managing Bookings", 
-    sublabel: "Organizing reservations",
+  {
+    type: "bookings",
+    label: "Managing Bookings",
+    sublabel: "Booking oversight",
     icon: Calendar,
-    color: "#8B5CF6" // Purple
+    color: "#8B5CF6", // Purple
   },
-  { 
-    type: "inquiries", 
-    label: "Answering Inquiries", 
-    sublabel: "Customer support",
-    icon: Mail,
-    color: "#EC4899" // Pink
-  },
-  { 
-    type: "feedback", 
+  {
+    type: "feedback",
     label: "Managing Feedback",
     sublabel: "Customer insights",
     icon: MessageSquare,
-    color: "#FF6B6B" // Sunset Coral
-  },
-  { 
-    type: "analytics", 
-    label: "Viewing Analytics", 
-    sublabel: "Performance reports",
-    icon: BarChart3,
-    color: "#F59E0B" // Orange
+    color: "#FF6B6B", // Sunset Coral
   },
 ];
 
@@ -123,10 +140,17 @@ export function TravelingAvatar() {
           className="text-center"
         >
           <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-md rounded-2xl px-5 py-2.5 border border-white/30 shadow-[0_8px_32px_rgba(0,0,0,0.1)]">
-            <currentActivity.icon className="w-4 h-4 text-white" strokeWidth={2.5} />
+            <currentActivity.icon
+              className="w-4 h-4 text-white"
+              strokeWidth={2.5}
+            />
             <div className="text-left">
-              <p className="text-white font-semibold text-sm leading-tight">{currentActivity.label}</p>
-              <p className="text-white/70 text-xs leading-tight">{currentActivity.sublabel}</p>
+              <p className="text-white font-semibold text-sm leading-tight">
+                {currentActivity.label}
+              </p>
+              <p className="text-white/70 text-xs leading-tight">
+                {currentActivity.sublabel}
+              </p>
             </div>
           </div>
         </motion.div>
@@ -153,19 +177,23 @@ export function TravelingAvatar() {
                     : "bg-white/20 backdrop-blur-sm group-hover:bg-white/40"
                 }`}
                 style={{
-                  borderColor: index === currentActivityIndex ? activity.color : "transparent",
+                  borderColor:
+                    index === currentActivityIndex
+                      ? activity.color
+                      : "transparent",
                   borderWidth: "2px",
                 }}
               >
                 <activity.icon
                   className="w-5 h-5 transition-colors duration-300"
                   style={{
-                    color: index === currentActivityIndex ? activity.color : "white",
+                    color:
+                      index === currentActivityIndex ? activity.color : "white",
                   }}
                   strokeWidth={2.5}
                 />
               </div>
-              
+
               {/* Tooltip on hover */}
               <motion.div
                 initial={{ opacity: 0, y: 5 }}
@@ -254,11 +282,40 @@ export function TravelingAvatar() {
                     }}
                   >
                     {/* Main Screen */}
-                    <rect x="70" y="80" width="80" height="60" rx="8" fill="white" />
-                    <rect x="75" y="85" width="70" height="4" rx="2" fill={currentActivity.color} opacity="0.6" />
-                    <rect x="75" y="92" width="50" height="3" rx="1.5" fill="#E5E7EB" />
-                    <rect x="75" y="98" width="60" height="3" rx="1.5" fill="#E5E7EB" />
-                    
+                    <rect
+                      x="70"
+                      y="80"
+                      width="80"
+                      height="60"
+                      rx="8"
+                      fill="white"
+                    />
+                    <rect
+                      x="75"
+                      y="85"
+                      width="70"
+                      height="4"
+                      rx="2"
+                      fill={currentActivity.color}
+                      opacity="0.6"
+                    />
+                    <rect
+                      x="75"
+                      y="92"
+                      width="50"
+                      height="3"
+                      rx="1.5"
+                      fill="#E5E7EB"
+                    />
+                    <rect
+                      x="75"
+                      y="98"
+                      width="60"
+                      height="3"
+                      rx="1.5"
+                      fill="#E5E7EB"
+                    />
+
                     {/* Dashboard Charts */}
                     <motion.g
                       animate={{
@@ -271,11 +328,51 @@ export function TravelingAvatar() {
                       }}
                       style={{ transformOrigin: "110px 125px" }}
                     >
-                      <rect x="80" y="115" width="6" height="15" rx="2" fill={currentActivity.color} opacity="0.8" />
-                      <rect x="90" y="110" width="6" height="20" rx="2" fill="#10B981" opacity="0.8" />
-                      <rect x="100" y="120" width="6" height="10" rx="2" fill="#FFB84D" opacity="0.8" />
-                      <rect x="110" y="105" width="6" height="25" rx="2" fill="#14B8A6" opacity="0.8" />
-                      <rect x="120" y="112" width="6" height="18" rx="2" fill="#FF6B6B" opacity="0.8" />
+                      <rect
+                        x="80"
+                        y="115"
+                        width="6"
+                        height="15"
+                        rx="2"
+                        fill={currentActivity.color}
+                        opacity="0.8"
+                      />
+                      <rect
+                        x="90"
+                        y="110"
+                        width="6"
+                        height="20"
+                        rx="2"
+                        fill="#10B981"
+                        opacity="0.8"
+                      />
+                      <rect
+                        x="100"
+                        y="120"
+                        width="6"
+                        height="10"
+                        rx="2"
+                        fill="#FFB84D"
+                        opacity="0.8"
+                      />
+                      <rect
+                        x="110"
+                        y="105"
+                        width="6"
+                        height="25"
+                        rx="2"
+                        fill="#14B8A6"
+                        opacity="0.8"
+                      />
+                      <rect
+                        x="120"
+                        y="112"
+                        width="6"
+                        height="18"
+                        rx="2"
+                        fill="#FF6B6B"
+                        opacity="0.8"
+                      />
                     </motion.g>
                   </motion.g>
 
@@ -305,7 +402,9 @@ export function TravelingAvatar() {
                   {[0, 1, 2].map((i) => (
                     <motion.path
                       key={`sparkle-${i}`}
-                      d={`M ${160 + i * 12} ${85 - i * 8} l 1.5 4 l 4 1.5 l -4 1.5 l -1.5 4 l -1.5 -4 l -4 -1.5 l 4 -1.5 Z`}
+                      d={`M ${160 + i * 12} ${
+                        85 - i * 8
+                      } l 1.5 4 l 4 1.5 l -4 1.5 l -1.5 4 l -1.5 -4 l -4 -1.5 l 4 -1.5 Z`}
                       fill={currentActivity.color}
                       opacity="0.7"
                       animate={{
@@ -337,20 +436,62 @@ export function TravelingAvatar() {
                     }}
                   >
                     {/* User Profile Card */}
-                    <rect x="60" y="70" width="100" height="80" rx="12" fill="white" opacity="0.95" />
-                    
+                    <rect
+                      x="60"
+                      y="70"
+                      width="100"
+                      height="80"
+                      rx="12"
+                      fill="white"
+                      opacity="0.95"
+                    />
+
                     {/* Avatar */}
-                    <circle cx="110" cy="95" r="12" fill={currentActivity.color} opacity="0.3" />
+                    <circle
+                      cx="110"
+                      cy="95"
+                      r="12"
+                      fill={currentActivity.color}
+                      opacity="0.3"
+                    />
                     <circle cx="110" cy="95" r="8" fill="white" />
                     <circle cx="108" cy="93" r="1.5" fill="#1A2B4F" />
                     <circle cx="112" cy="93" r="1.5" fill="#1A2B4F" />
-                    <path d="M 107 96 Q 110 98 113 96" stroke="#1A2B4F" strokeWidth="1" fill="none" strokeLinecap="round" />
-                    
+                    <path
+                      d="M 107 96 Q 110 98 113 96"
+                      stroke="#1A2B4F"
+                      strokeWidth="1"
+                      fill="none"
+                      strokeLinecap="round"
+                    />
+
                     {/* User Info Lines */}
-                    <rect x="70" y="112" width="80" height="4" rx="2" fill={currentActivity.color} opacity="0.6" />
-                    <rect x="80" y="120" width="60" height="3" rx="1.5" fill="#E5E7EB" />
-                    <rect x="75" y="127" width="70" height="3" rx="1.5" fill="#E5E7EB" />
-                    
+                    <rect
+                      x="70"
+                      y="112"
+                      width="80"
+                      height="4"
+                      rx="2"
+                      fill={currentActivity.color}
+                      opacity="0.6"
+                    />
+                    <rect
+                      x="80"
+                      y="120"
+                      width="60"
+                      height="3"
+                      rx="1.5"
+                      fill="#E5E7EB"
+                    />
+                    <rect
+                      x="75"
+                      y="127"
+                      width="70"
+                      height="3"
+                      rx="1.5"
+                      fill="#E5E7EB"
+                    />
+
                     {/* Action Buttons */}
                     <motion.rect
                       x="70"
@@ -368,7 +509,14 @@ export function TravelingAvatar() {
                         repeat: Infinity,
                       }}
                     />
-                    <rect x="115" y="137" width="35" height="8" rx="4" fill="#E5E7EB" />
+                    <rect
+                      x="115"
+                      y="137"
+                      width="35"
+                      height="8"
+                      rx="4"
+                      fill="#E5E7EB"
+                    />
                   </motion.g>
 
                   {/* User Icons Floating */}
@@ -433,16 +581,75 @@ export function TravelingAvatar() {
                     }}
                   >
                     {/* Booking Documents Stack */}
-                    <rect x="75" y="90" width="70" height="50" rx="6" fill="white" opacity="0.4" />
-                    <rect x="72" y="85" width="70" height="50" rx="6" fill="white" opacity="0.7" />
-                    <rect x="69" y="80" width="70" height="50" rx="6" fill="white" />
-                    
+                    <rect
+                      x="75"
+                      y="90"
+                      width="70"
+                      height="50"
+                      rx="6"
+                      fill="white"
+                      opacity="0.4"
+                    />
+                    <rect
+                      x="72"
+                      y="85"
+                      width="70"
+                      height="50"
+                      rx="6"
+                      fill="white"
+                      opacity="0.7"
+                    />
+                    <rect
+                      x="69"
+                      y="80"
+                      width="70"
+                      height="50"
+                      rx="6"
+                      fill="white"
+                    />
+
                     {/* Document Content */}
-                    <rect x="75" y="87" width="40" height="3" rx="1.5" fill={currentActivity.color} opacity="0.6" />
-                    <rect x="75" y="93" width="55" height="2" rx="1" fill="#E5E7EB" />
-                    <rect x="75" y="98" width="50" height="2" rx="1" fill="#E5E7EB" />
-                    <rect x="75" y="103" width="45" height="2" rx="1" fill="#E5E7EB" />
-                    <rect x="75" y="108" width="52" height="2" rx="1" fill="#E5E7EB" />
+                    <rect
+                      x="75"
+                      y="87"
+                      width="40"
+                      height="3"
+                      rx="1.5"
+                      fill={currentActivity.color}
+                      opacity="0.6"
+                    />
+                    <rect
+                      x="75"
+                      y="93"
+                      width="55"
+                      height="2"
+                      rx="1"
+                      fill="#E5E7EB"
+                    />
+                    <rect
+                      x="75"
+                      y="98"
+                      width="50"
+                      height="2"
+                      rx="1"
+                      fill="#E5E7EB"
+                    />
+                    <rect
+                      x="75"
+                      y="103"
+                      width="45"
+                      height="2"
+                      rx="1"
+                      fill="#E5E7EB"
+                    />
+                    <rect
+                      x="75"
+                      y="108"
+                      width="52"
+                      height="2"
+                      rx="1"
+                      fill="#E5E7EB"
+                    />
                   </motion.g>
 
                   {/* Approval Stamp Animation */}
@@ -458,7 +665,15 @@ export function TravelingAvatar() {
                       repeatDelay: 1.5,
                     }}
                   >
-                    <circle cx="115" cy="105" r="18" fill="none" stroke={currentActivity.color} strokeWidth="3" opacity="0.6" />
+                    <circle
+                      cx="115"
+                      cy="105"
+                      r="18"
+                      fill="none"
+                      stroke={currentActivity.color}
+                      strokeWidth="3"
+                      opacity="0.6"
+                    />
                     <motion.path
                       d="M 105 105 l 6 6 l 12 -12"
                       stroke={currentActivity.color}
@@ -515,11 +730,26 @@ export function TravelingAvatar() {
                     }}
                   >
                     {/* Document/Itinerary */}
-                    <rect x="65" y="70" width="90" height="90" rx="8" fill="white" />
-                    
+                    <rect
+                      x="65"
+                      y="70"
+                      width="90"
+                      height="90"
+                      rx="8"
+                      fill="white"
+                    />
+
                     {/* Title Line */}
-                    <rect x="72" y="78" width="55" height="4" rx="2" fill={currentActivity.color} opacity="0.7" />
-                    
+                    <rect
+                      x="72"
+                      y="78"
+                      width="55"
+                      height="4"
+                      rx="2"
+                      fill={currentActivity.color}
+                      opacity="0.7"
+                    />
+
                     {/* Timeline Dots and Lines */}
                     {[0, 1, 2, 3].map((i) => (
                       <g key={`timeline-${i}`}>
@@ -549,8 +779,23 @@ export function TravelingAvatar() {
                             opacity="0.4"
                           />
                         )}
-                        <rect x="85" y={92 + i * 14} width="60" height="2.5" rx="1.25" fill="#E5E7EB" />
-                        <rect x="85" y={96 + i * 14} width="50" height="2" rx="1" fill="#E5E7EB" opacity="0.6" />
+                        <rect
+                          x="85"
+                          y={92 + i * 14}
+                          width="60"
+                          height="2.5"
+                          rx="1.25"
+                          fill="#E5E7EB"
+                        />
+                        <rect
+                          x="85"
+                          y={96 + i * 14}
+                          width="50"
+                          height="2"
+                          rx="1"
+                          fill="#E5E7EB"
+                          opacity="0.6"
+                        />
                       </g>
                     ))}
                   </motion.g>
@@ -568,15 +813,29 @@ export function TravelingAvatar() {
                       ease: "easeInOut",
                     }}
                   >
-                    <rect x="145" y="135" width="4" height="15" rx="2" fill={currentActivity.color} transform="rotate(-45 147 142)" />
-                    <path d="M 142 145 l -3 3 l 6 -1 Z" fill={currentActivity.color} opacity="0.8" />
+                    <rect
+                      x="145"
+                      y="135"
+                      width="4"
+                      height="15"
+                      rx="2"
+                      fill={currentActivity.color}
+                      transform="rotate(-45 147 142)"
+                    />
+                    <path
+                      d="M 142 145 l -3 3 l 6 -1 Z"
+                      fill={currentActivity.color}
+                      opacity="0.8"
+                    />
                   </motion.g>
 
                   {/* Sparkles from creation */}
                   {[0, 1, 2].map((i) => (
                     <motion.path
                       key={`create-sparkle-${i}`}
-                      d={`M ${160 + i * 8} ${100 - i * 10} l 1.5 4 l 4 1.5 l -4 1.5 l -1.5 4 l -1.5 -4 l -4 -1.5 l 4 -1.5 Z`}
+                      d={`M ${160 + i * 8} ${
+                        100 - i * 10
+                      } l 1.5 4 l 4 1.5 l -4 1.5 l -1.5 4 l -1.5 -4 l -4 -1.5 l 4 -1.5 Z`}
                       fill={currentActivity.color}
                       opacity="0.6"
                       animate={{
@@ -608,27 +867,59 @@ export function TravelingAvatar() {
                     }}
                   >
                     {/* Calendar Base */}
-                    <rect x="65" y="75" width="90" height="85" rx="8" fill="white" opacity="0.95" />
-                    
+                    <rect
+                      x="65"
+                      y="75"
+                      width="90"
+                      height="85"
+                      rx="8"
+                      fill="white"
+                      opacity="0.95"
+                    />
+
                     {/* Calendar Header */}
-                    <rect x="65" y="75" width="90" height="15" rx="8" fill={currentActivity.color} opacity="0.8" />
-                    <rect x="73" y="80" width="4" height="8" rx="2" fill="white" opacity="0.7" />
-                    <rect x="147" y="80" width="4" height="8" rx="2" fill="white" opacity="0.7" />
-                    
+                    <rect
+                      x="65"
+                      y="75"
+                      width="90"
+                      height="15"
+                      rx="8"
+                      fill={currentActivity.color}
+                      opacity="0.8"
+                    />
+                    <rect
+                      x="73"
+                      y="80"
+                      width="4"
+                      height="8"
+                      rx="2"
+                      fill="white"
+                      opacity="0.7"
+                    />
+                    <rect
+                      x="147"
+                      y="80"
+                      width="4"
+                      height="8"
+                      rx="2"
+                      fill="white"
+                      opacity="0.7"
+                    />
+
                     {/* Calendar Days Grid */}
                     {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map((i) => (
-                      <rect 
+                      <rect
                         key={`day-${i}`}
-                        x={73 + (i % 5) * 14} 
-                        y={98 + Math.floor(i / 5) * 14} 
-                        width="10" 
-                        height="10" 
-                        rx="2" 
-                        fill="#E5E7EB" 
+                        x={73 + (i % 5) * 14}
+                        y={98 + Math.floor(i / 5) * 14}
+                        width="10"
+                        height="10"
+                        rx="2"
+                        fill="#E5E7EB"
                         opacity="0.5"
                       />
                     ))}
-                    
+
                     {/* Highlighted Booking Days */}
                     {[2, 5, 8].map((i) => (
                       <motion.rect
@@ -651,12 +942,14 @@ export function TravelingAvatar() {
                         }}
                       />
                     ))}
-                    
+
                     {/* Booking confirmations checkmarks */}
                     {[2, 5, 8].map((i) => (
                       <motion.path
                         key={`check-booking-${i}`}
-                        d={`M ${75 + (i % 5) * 14} ${102 + Math.floor(i / 5) * 14} l 2 2 l 4 -4`}
+                        d={`M ${75 + (i % 5) * 14} ${
+                          102 + Math.floor(i / 5) * 14
+                        } l 2 2 l 4 -4`}
                         stroke="white"
                         strokeWidth="1.5"
                         fill="none"
@@ -691,7 +984,13 @@ export function TravelingAvatar() {
                         delay: i * 0.7,
                       }}
                     >
-                      <circle cx="165" cy={85 + i * 15} r="4" fill={currentActivity.color} opacity="0.8" />
+                      <circle
+                        cx="165"
+                        cy={85 + i * 15}
+                        r="4"
+                        fill={currentActivity.color}
+                        opacity="0.8"
+                      />
                       <path
                         d={`M ${163} ${85 + i * 15} l 1.5 1.5 l 3 -3`}
                         stroke="white"
@@ -713,7 +1012,15 @@ export function TravelingAvatar() {
                     }}
                   >
                     <circle cx="145" cy="70" r="10" fill="#EF4444" />
-                    <text x="145" y="74" textAnchor="middle" fill="white" style={{ fontSize: '10px', fontWeight: 'bold' }}>5</text>
+                    <text
+                      x="145"
+                      y="74"
+                      textAnchor="middle"
+                      fill="white"
+                      style={{ fontSize: "10px", fontWeight: "bold" }}
+                    >
+                      5
+                    </text>
                   </motion.g>
                 </g>
               )}
@@ -732,28 +1039,74 @@ export function TravelingAvatar() {
                     }}
                   >
                     {/* Email Inbox */}
-                    <rect x="60" y="70" width="100" height="90" rx="8" fill="white" opacity="0.95" />
-                    
+                    <rect
+                      x="60"
+                      y="70"
+                      width="100"
+                      height="90"
+                      rx="8"
+                      fill="white"
+                      opacity="0.95"
+                    />
+
                     {/* Inbox Header */}
-                    <rect x="60" y="70" width="100" height="18" rx="8" fill={currentActivity.color} opacity="0.7" />
-                    <text x="110" y="82" textAnchor="middle" fill="white" style={{ fontSize: '10px', fontWeight: 'bold' }}>Inbox</text>
-                    
+                    <rect
+                      x="60"
+                      y="70"
+                      width="100"
+                      height="18"
+                      rx="8"
+                      fill={currentActivity.color}
+                      opacity="0.7"
+                    />
+                    <text
+                      x="110"
+                      y="82"
+                      textAnchor="middle"
+                      fill="white"
+                      style={{ fontSize: "10px", fontWeight: "bold" }}
+                    >
+                      Inbox
+                    </text>
+
                     {/* Email List Items */}
                     {[0, 1, 2, 3].map((i) => (
                       <g key={`email-${i}`}>
-                        <rect 
-                          x="65" 
-                          y={95 + i * 16} 
-                          width="90" 
-                          height="14" 
-                          rx="4" 
-                          fill={i === 0 ? currentActivity.color : "#F3F4F6"} 
+                        <rect
+                          x="65"
+                          y={95 + i * 16}
+                          width="90"
+                          height="14"
+                          rx="4"
+                          fill={i === 0 ? currentActivity.color : "#F3F4F6"}
                           opacity={i === 0 ? "0.2" : "0.5"}
                         />
-                        <circle cx="72" cy={102 + i * 16} r="3" fill={i === 0 ? currentActivity.color : "#9CA3AF"} opacity="0.8" />
-                        <rect x="78" y={98 + i * 16} width="50" height="2" rx="1" fill={i === 0 ? currentActivity.color : "#6B7280"} opacity="0.6" />
-                        <rect x="78" y={102 + i * 16} width="35" height="2" rx="1" fill="#9CA3AF" opacity="0.4" />
-                        
+                        <circle
+                          cx="72"
+                          cy={102 + i * 16}
+                          r="3"
+                          fill={i === 0 ? currentActivity.color : "#9CA3AF"}
+                          opacity="0.8"
+                        />
+                        <rect
+                          x="78"
+                          y={98 + i * 16}
+                          width="50"
+                          height="2"
+                          rx="1"
+                          fill={i === 0 ? currentActivity.color : "#6B7280"}
+                          opacity="0.6"
+                        />
+                        <rect
+                          x="78"
+                          y={102 + i * 16}
+                          width="35"
+                          height="2"
+                          rx="1"
+                          fill="#9CA3AF"
+                          opacity="0.4"
+                        />
+
                         {/* Unread badge */}
                         {i === 0 && (
                           <motion.circle
@@ -784,7 +1137,15 @@ export function TravelingAvatar() {
                       repeat: Infinity,
                     }}
                   >
-                    <rect x="85" y="168" width="50" height="10" rx="5" fill={currentActivity.color} opacity="0.2" />
+                    <rect
+                      x="85"
+                      y="168"
+                      width="50"
+                      height="10"
+                      rx="5"
+                      fill={currentActivity.color}
+                      opacity="0.2"
+                    />
                     {[0, 1, 2].map((i) => (
                       <motion.circle
                         key={`dot-${i}`}
@@ -821,13 +1182,13 @@ export function TravelingAvatar() {
                       }}
                     >
                       {/* Mail icon */}
-                      <rect 
-                        x={45 + i * 95} 
-                        y="170" 
-                        width="12" 
-                        height="9" 
-                        rx="2" 
-                        fill={currentActivity.color} 
+                      <rect
+                        x={45 + i * 95}
+                        y="170"
+                        width="12"
+                        height="9"
+                        rx="2"
+                        fill={currentActivity.color}
                         opacity="0.8"
                       />
                       <path
@@ -844,7 +1205,9 @@ export function TravelingAvatar() {
                   {[0, 1, 2].map((i) => (
                     <motion.path
                       key={`sparkle-inquiry-${i}`}
-                      d={`M ${165 + i * 8} ${75 - i * 8} l 1.5 4 l 4 1.5 l -4 1.5 l -1.5 4 l -1.5 -4 l -4 -1.5 l 4 -1.5 Z`}
+                      d={`M ${165 + i * 8} ${
+                        75 - i * 8
+                      } l 1.5 4 l 4 1.5 l -4 1.5 l -1.5 4 l -1.5 -4 l -4 -1.5 l 4 -1.5 Z`}
                       fill={currentActivity.color}
                       opacity="0.7"
                       animate={{
@@ -883,12 +1246,14 @@ export function TravelingAvatar() {
                       strokeWidth="2"
                       opacity="0.95"
                     />
-                    
+
                     {/* Star Ratings */}
                     {[0, 1, 2, 3, 4].map((i) => (
                       <motion.path
                         key={`star-${i}`}
-                        d={`M ${85 + i * 11} 95 l 2 6 l 6 0 l -5 4 l 2 6 l -5 -3 l -5 3 l 2 -6 l -5 -4 l 6 0 Z`}
+                        d={`M ${
+                          85 + i * 11
+                        } 95 l 2 6 l 6 0 l -5 4 l 2 6 l -5 -3 l -5 3 l 2 -6 l -5 -4 l 6 0 Z`}
                         fill={currentActivity.color}
                         opacity="0.8"
                         animate={{
@@ -904,9 +1269,30 @@ export function TravelingAvatar() {
                     ))}
 
                     {/* Feedback Text Lines */}
-                    <rect x="80" y="115" width="60" height="2.5" rx="1.25" fill="#E5E7EB" />
-                    <rect x="80" y="121" width="55" height="2.5" rx="1.25" fill="#E5E7EB" />
-                    <rect x="80" y="127" width="50" height="2.5" rx="1.25" fill="#E5E7EB" />
+                    <rect
+                      x="80"
+                      y="115"
+                      width="60"
+                      height="2.5"
+                      rx="1.25"
+                      fill="#E5E7EB"
+                    />
+                    <rect
+                      x="80"
+                      y="121"
+                      width="55"
+                      height="2.5"
+                      rx="1.25"
+                      fill="#E5E7EB"
+                    />
+                    <rect
+                      x="80"
+                      y="127"
+                      width="50"
+                      height="2.5"
+                      rx="1.25"
+                      fill="#E5E7EB"
+                    />
                   </motion.g>
 
                   {/* Additional Feedback Bubbles (smaller) */}
@@ -924,7 +1310,21 @@ export function TravelingAvatar() {
                       }}
                     >
                       <path
-                        d={`M ${45 + i * 110} ${85 + i * 20} Q ${45 + i * 110} ${75 + i * 20} ${55 + i * 110} ${75 + i * 20} L ${75 + i * 110} ${75 + i * 20} Q ${85 + i * 110} ${75 + i * 20} ${85 + i * 110} ${85 + i * 20} L ${85 + i * 110} ${95 + i * 20} Q ${85 + i * 110} ${105 + i * 20} ${75 + i * 110} ${105 + i * 20} L ${60 + i * 110} ${105 + i * 20} L ${55 + i * 110} ${112 + i * 20} L ${55 + i * 110} ${105 + i * 20} Q ${45 + i * 110} ${105 + i * 20} ${45 + i * 110} ${95 + i * 20} Z`}
+                        d={`M ${45 + i * 110} ${85 + i * 20} Q ${
+                          45 + i * 110
+                        } ${75 + i * 20} ${55 + i * 110} ${75 + i * 20} L ${
+                          75 + i * 110
+                        } ${75 + i * 20} Q ${85 + i * 110} ${75 + i * 20} ${
+                          85 + i * 110
+                        } ${85 + i * 20} L ${85 + i * 110} ${95 + i * 20} Q ${
+                          85 + i * 110
+                        } ${105 + i * 20} ${75 + i * 110} ${105 + i * 20} L ${
+                          60 + i * 110
+                        } ${105 + i * 20} L ${55 + i * 110} ${112 + i * 20} L ${
+                          55 + i * 110
+                        } ${105 + i * 20} Q ${45 + i * 110} ${105 + i * 20} ${
+                          45 + i * 110
+                        } ${95 + i * 20} Z`}
                         fill="white"
                         opacity="0.6"
                       />
@@ -935,7 +1335,9 @@ export function TravelingAvatar() {
                   {[0, 1].map((i) => (
                     <motion.path
                       key={`heart-${i}`}
-                      d={`M ${160 + i * 10} ${80 + i * 15} c -2 -2 -5 -2 -7 0 c -2 -2 -5 -2 -7 0 c -2 2 -2 5 0 7 l 7 7 l 7 -7 c 2 -2 2 -5 0 -7 Z`}
+                      d={`M ${160 + i * 10} ${
+                        80 + i * 15
+                      } c -2 -2 -5 -2 -7 0 c -2 -2 -5 -2 -7 0 c -2 2 -2 5 0 7 l 7 7 l 7 -7 c 2 -2 2 -5 0 -7 Z`}
                       fill={currentActivity.color}
                       opacity="0.6"
                       animate={{
@@ -969,12 +1371,36 @@ export function TravelingAvatar() {
                     }}
                   >
                     {/* Dashboard Container */}
-                    <rect x="60" y="65" width="100" height="95" rx="8" fill="white" opacity="0.95" />
-                    
+                    <rect
+                      x="60"
+                      y="65"
+                      width="100"
+                      height="95"
+                      rx="8"
+                      fill="white"
+                      opacity="0.95"
+                    />
+
                     {/* Header */}
-                    <rect x="60" y="65" width="100" height="15" rx="8" fill={currentActivity.color} opacity="0.7" />
-                    <text x="110" y="76" textAnchor="middle" fill="white" style={{ fontSize: '9px', fontWeight: 'bold' }}>Analytics</text>
-                    
+                    <rect
+                      x="60"
+                      y="65"
+                      width="100"
+                      height="15"
+                      rx="8"
+                      fill={currentActivity.color}
+                      opacity="0.7"
+                    />
+                    <text
+                      x="110"
+                      y="76"
+                      textAnchor="middle"
+                      fill="white"
+                      style={{ fontSize: "9px", fontWeight: "bold" }}
+                    >
+                      Analytics
+                    </text>
+
                     {/* Bar Chart */}
                     {[0, 1, 2, 3, 4].map((i) => {
                       const heights = [25, 35, 20, 40, 30];
@@ -990,7 +1416,11 @@ export function TravelingAvatar() {
                           opacity="0.7"
                           animate={{
                             height: [heights[i], heights[i] + 5, heights[i]],
-                            y: [125 - heights[i], 125 - heights[i] - 5, 125 - heights[i]],
+                            y: [
+                              125 - heights[i],
+                              125 - heights[i] - 5,
+                              125 - heights[i],
+                            ],
                             opacity: [0.7, 0.9, 0.7],
                           }}
                           transition={{
@@ -1001,14 +1431,37 @@ export function TravelingAvatar() {
                         />
                       );
                     })}
-                    
+
                     {/* Chart Base Line */}
-                    <line x1="65" y1="125" x2="155" y2="125" stroke="#E5E7EB" strokeWidth="1.5" />
-                    
+                    <line
+                      x1="65"
+                      y1="125"
+                      x2="155"
+                      y2="125"
+                      stroke="#E5E7EB"
+                      strokeWidth="1.5"
+                    />
+
                     {/* Stats Cards */}
-                    <rect x="70" y="135" width="35" height="18" rx="4" fill={currentActivity.color} opacity="0.15" />
-                    <rect x="115" y="135" width="35" height="18" rx="4" fill={currentActivity.color} opacity="0.15" />
-                    
+                    <rect
+                      x="70"
+                      y="135"
+                      width="35"
+                      height="18"
+                      rx="4"
+                      fill={currentActivity.color}
+                      opacity="0.15"
+                    />
+                    <rect
+                      x="115"
+                      y="135"
+                      width="35"
+                      height="18"
+                      rx="4"
+                      fill={currentActivity.color}
+                      opacity="0.15"
+                    />
+
                     {/* Stats Icons */}
                     <motion.circle
                       cx="78"
@@ -1039,12 +1492,44 @@ export function TravelingAvatar() {
                         delay: 0.5,
                       }}
                     />
-                    
+
                     {/* Stats Text Lines */}
-                    <rect x="85" y="141" width="15" height="2" rx="1" fill={currentActivity.color} opacity="0.5" />
-                    <rect x="85" y="145" width="12" height="1.5" rx="0.75" fill="#9CA3AF" opacity="0.4" />
-                    <rect x="130" y="141" width="15" height="2" rx="1" fill={currentActivity.color} opacity="0.5" />
-                    <rect x="130" y="145" width="12" height="1.5" rx="0.75" fill="#9CA3AF" opacity="0.4" />
+                    <rect
+                      x="85"
+                      y="141"
+                      width="15"
+                      height="2"
+                      rx="1"
+                      fill={currentActivity.color}
+                      opacity="0.5"
+                    />
+                    <rect
+                      x="85"
+                      y="145"
+                      width="12"
+                      height="1.5"
+                      rx="0.75"
+                      fill="#9CA3AF"
+                      opacity="0.4"
+                    />
+                    <rect
+                      x="130"
+                      y="141"
+                      width="15"
+                      height="2"
+                      rx="1"
+                      fill={currentActivity.color}
+                      opacity="0.5"
+                    />
+                    <rect
+                      x="130"
+                      y="145"
+                      width="12"
+                      height="1.5"
+                      rx="0.75"
+                      fill="#9CA3AF"
+                      opacity="0.4"
+                    />
                   </motion.g>
 
                   {/* Trend Arrows */}
@@ -1062,7 +1547,9 @@ export function TravelingAvatar() {
                       }}
                     >
                       <path
-                        d={`M ${165 + i * 12} ${90 + i * 20} l 0 -8 l 3 4 l -3 -4 l -3 4`}
+                        d={`M ${165 + i * 12} ${
+                          90 + i * 20
+                        } l 0 -8 l 3 4 l -3 -4 l -3 4`}
                         stroke={currentActivity.color}
                         strokeWidth="2"
                         fill="none"
@@ -1092,6 +1579,247 @@ export function TravelingAvatar() {
                       }}
                     />
                   ))}
+                </g>
+              )}
+
+              {/* Managing FAQ */}
+              {currentActivity.type === "faq" && (
+                <g>
+                  <motion.g
+                    animate={{
+                      y: [0, -4, 0],
+                    }}
+                    transition={{
+                      duration: 3,
+                      repeat: Infinity,
+                      ease: "easeInOut",
+                    }}
+                  >
+                    {/* FAQ Container */}
+                    <rect
+                      x="65"
+                      y="70"
+                      width="90"
+                      height="90"
+                      rx="10"
+                      fill="white"
+                      opacity="0.95"
+                    />
+
+                    {/* FAQ Header */}
+                    <rect
+                      x="65"
+                      y="70"
+                      width="90"
+                      height="18"
+                      rx="10"
+                      fill={currentActivity.color}
+                      opacity="0.8"
+                    />
+                    <text
+                      x="110"
+                      y="82"
+                      textAnchor="middle"
+                      fill="white"
+                      style={{ fontSize: "10px", fontWeight: "bold" }}
+                    >
+                      FAQ
+                    </text>
+
+                    {/* FAQ Items */}
+                    {[0, 1, 2].map((i) => (
+                      <g key={`faq-${i}`}>
+                        {/* Question Bubble */}
+                        <motion.rect
+                          x="75"
+                          y={95 + i * 18}
+                          width="70"
+                          height="14"
+                          rx="7"
+                          fill={currentActivity.color}
+                          opacity="0.15"
+                          animate={{
+                            scaleX: [1, 1.02, 1],
+                          }}
+                          transition={{
+                            duration: 2,
+                            repeat: Infinity,
+                            delay: i * 0.3,
+                          }}
+                        />
+                        
+                        {/* Question Mark Icon */}
+                        <motion.path
+                          d={`M ${
+                            80 + i * 2
+                          } ${104 + i * 18} a 1.5 1.5 0 0 1 0 3 a 1.5 1.5 0 0 1 0 -3 M ${
+                            78 + i * 2
+                          } ${98 + i * 18} a 3 3 0 0 1 6 0 a 3 3 0 0 1 -3 3 v 3`}
+                          stroke={currentActivity.color}
+                          strokeWidth="1.5"
+                          fill="none"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          animate={{
+                            rotate: [0, 5, 0],
+                          }}
+                          transition={{
+                            duration: 2,
+                            repeat: Infinity,
+                            delay: i * 0.2,
+                          }}
+                        />
+                        
+                        {/* Question Text */}
+                        <rect
+                          x="88"
+                          y={99 + i * 18}
+                          width="52"
+                          height="2"
+                          rx="1"
+                          fill="#6B7280"
+                          opacity="0.7"
+                        />
+                        <rect
+                          x="88"
+                          y={103 + i * 18}
+                          width="45"
+                          height="1.5"
+                          rx="0.75"
+                          fill="#9CA3AF"
+                          opacity="0.5"
+                        />
+                        
+                        {/* Answer Indicator */}
+                        <motion.circle
+                          cx="140"
+                          cy={104 + i * 18}
+                          r="4"
+                          fill="#10B981"
+                          opacity="0.7"
+                          animate={{
+                            scale: [1, 1.2, 1],
+                          }}
+                          transition={{
+                            duration: 1.5,
+                            repeat: Infinity,
+                            delay: i * 0.4,
+                          }}
+                        />
+                        <path
+                          d={`M ${138} ${104 + i * 18} l 2 2 l 4 -4`}
+                          stroke="white"
+                          strokeWidth="1.5"
+                          fill="none"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </g>
+                    ))}
+
+                    {/* Add FAQ Button */}
+                    <motion.rect
+                      x="85"
+                      y="155"
+                      width="50"
+                      height="8"
+                      rx="4"
+                      fill={currentActivity.color}
+                      opacity="0.8"
+                      animate={{
+                        opacity: [0.8, 1, 0.8],
+                      }}
+                      transition={{
+                        duration: 1.5,
+                        repeat: Infinity,
+                      }}
+                    />
+                    <text
+                      x="110"
+                      y="160"
+                      textAnchor="middle"
+                      fill="white"
+                      style={{ fontSize: "8px", fontWeight: "bold" }}
+                    >
+                      + Add FAQ
+                    </text>
+                  </motion.g>
+
+                  {/* Floating Question Marks */}
+                  {[0, 1, 2].map((i) => (
+                    <motion.text
+                      key={`float-q-${i}`}
+                      x={50 + i * 40}
+                      y={170 + i * 5}
+                      textAnchor="middle"
+                      fill={currentActivity.color}
+                      opacity="0.6"
+                      style={{ fontSize: "20px", fontWeight: "bold" }}
+                      animate={{
+                        y: [170 + i * 5, 160 + i * 5, 170 + i * 5],
+                        opacity: [0.4, 0.8, 0.4],
+                        scale: [1, 1.3, 1],
+                      }}
+                      transition={{
+                        duration: 2.5,
+                        repeat: Infinity,
+                        delay: i * 0.3,
+                      }}
+                    >
+                      ?
+                    </motion.text>
+                  ))}
+
+                  {/* Knowledge Sparkles */}
+                  {[0, 1, 2].map((i) => (
+                    <motion.path
+                      key={`faq-sparkle-${i}`}
+                      d={`M ${160 + i * 8} ${
+                        75 - i * 10
+                      } l 1.5 4 l 4 1.5 l -4 1.5 l -1.5 4 l -1.5 -4 l -4 -1.5 l 4 -1.5 Z`}
+                      fill={currentActivity.color}
+                      opacity="0.6"
+                      animate={{
+                        opacity: [0, 0.8, 0],
+                        scale: [0, 1.2, 0],
+                        rotate: [0, 180, 360],
+                      }}
+                      transition={{
+                        duration: 2.5,
+                        repeat: Infinity,
+                        delay: i * 0.6,
+                      }}
+                    />
+                  ))}
+
+                  {/* Search Icon */}
+                  <motion.g
+                    animate={{
+                      scale: [1, 1.05, 1],
+                    }}
+                    transition={{
+                      duration: 2,
+                      repeat: Infinity,
+                    }}
+                  >
+                    <circle
+                      cx="45"
+                      cy="85"
+                      r="6"
+                      fill="white"
+                      stroke={currentActivity.color}
+                      strokeWidth="1.5"
+                    />
+                    <line
+                      x1="48"
+                      y1="88"
+                      x2="52"
+                      y2="92"
+                      stroke={currentActivity.color}
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                    />
+                  </motion.g>
                 </g>
               )}
             </svg>

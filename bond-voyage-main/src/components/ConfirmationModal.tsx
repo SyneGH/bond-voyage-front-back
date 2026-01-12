@@ -1,4 +1,11 @@
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "./ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "./ui/dialog";
 import { Button } from "./ui/button";
 import { ReactNode } from "react";
 
@@ -63,34 +70,34 @@ export function ConfirmationModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent 
-        className="max-w-[calc(100vw-2rem)] sm:max-w-[540px] max-h-[85vh] overflow-y-auto"
+      <DialogContent
+        className="max-w-[calc(100vw-2rem)] sm:max-w-135 max-h-[85vh] overflow-y-auto"
         {...(!description && { "aria-describedby": undefined })}
       >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 sm:gap-3 text-base sm:text-lg">
-            <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-xl ${iconGradient} flex items-center justify-center shadow-lg ${iconShadow} flex-shrink-0`}>
+            <div
+              className={`w-8 h-8 sm:w-10 sm:h-10 rounded-xl ${iconGradient} flex items-center justify-center shadow-lg ${iconShadow} shrink-0`}
+            >
               {icon}
             </div>
-            <span className="break-words">{title}</span>
+            <span className="wrap-break-word">{title}</span>
           </DialogTitle>
           {description ? (
             <DialogDescription className="text-sm">
               {description}
             </DialogDescription>
           ) : (
-            <DialogDescription className="sr-only">
-              {title}
-            </DialogDescription>
+            <DialogDescription className="sr-only">{title}</DialogDescription>
           )}
         </DialogHeader>
-        
+
         <div className="px-4 sm:px-6 lg:px-8 py-4 sm:py-6 mb-2">
-          <div className={`${contentGradient} border ${contentBorder} rounded-xl sm:rounded-2xl p-4 sm:p-5 relative overflow-hidden`}>
+          <div
+            className={`${contentGradient} border ${contentBorder} rounded-xl sm:rounded-2xl p-4 sm:p-5 relative overflow-hidden`}
+          >
             <div className="absolute top-0 right-0 w-24 h-24 sm:w-32 sm:h-32 bg-white/10 rounded-full blur-3xl"></div>
-            <div className="relative text-sm sm:text-base">
-              {content}
-            </div>
+            <div className="relative text-sm sm:text-base">{content}</div>
           </div>
         </div>
 

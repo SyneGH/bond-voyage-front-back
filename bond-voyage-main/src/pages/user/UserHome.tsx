@@ -6,24 +6,17 @@ import {
   Star,
   Award,
   Sparkles,
-  ArrowRight,
   Clock,
   CheckCircle,
-  Users,
   FileText,
   CloudRain,
   Sun,
   Cloud,
-  Droplets,
-  Wind,
   Search,
   Briefcase,
   UserPlus,
-  Activity,
-  MessageSquare,
   Send,
   Mail,
-  Type,
   Bold,
   Italic,
   Underline,
@@ -37,37 +30,44 @@ import {
   X,
   Image as ImageIcon,
   File,
-  Download,
   ChevronRight,
   Check,
   Eye,
   ExternalLink,
+  XCircle,
+  Users,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { StatCard } from "../../components/StatCard";
 import { ContentCard } from "../../components/ContentCard";
 import { BookingListCard } from "../../components/BookingListCard";
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-} from "recharts";
+
 import { AdventureAvatar } from "../../components/AdventureAvatar";
-import { useState, useEffect, useRef } from "react";
-import { toast } from "sonner@2.0.3";
+import { useState, useEffect, useRef, useMemo } from "react";
+import { toast } from "sonner";
 import { motion, AnimatePresence } from "motion/react";
-import { useProfile } from "../../components/ProfileContext";
 import { useBookings } from "../../components/BookingContext";
-import EmojiPicker, { EmojiClickData, EmojiStyle, Theme } from 'emoji-picker-react';
+import EmojiPicker, {
+  EmojiClickData,
+  EmojiStyle,
+  Theme,
+} from "emoji-picker-react";
 import { ConfirmationModal } from "../../components/ConfirmationModal";
+import { useActivityLogs } from "../../hooks/useActivityLogs";
+import { useProfile } from "../../hooks/useAuth";
+import { queryKeys } from "../../utils/lib/queryKeys";
+import {
+  getDefaultActivities,
+  transformActivityLogs,
+} from "../../utils/helpers/transformActivityLogs";
+import { useWeather } from "../../hooks/useWeather";
+import {
+  Coordinates,
+  getCurrentLocation,
+} from "../../utils/helpers/getCurrentLocation";
 
 export function UserHome() {
   const navigate = useNavigate();
-  const { userProfileData } = useProfile();
   const { userTravels } = useBookings();
   const [selectedLocation, setSelectedLocation] = useState("Manila");
   const [searchLocation, setSearchLocation] = useState("");
@@ -85,23 +85,76 @@ export function UserHome() {
   const [showFilePreview, setShowFilePreview] = useState(false);
   const [previewFile, setPreviewFile] = useState<File | null>(null);
   const [previewFileUrl, setPreviewFileUrl] = useState<string>("");
-  const [textAlign, setTextAlign] = useState<"left" | "center" | "right">("left");
+  const [textAlign, setTextAlign] = useState<"left" | "center" | "right">(
+    "left"
+  );
   const [showTextAlignIndicator, setShowTextAlignIndicator] = useState(false);
-  
+
   const messageRef = useRef<HTMLDivElement>(null);
   const emojiPickerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Get initials from first and last name
+  const { data: authProfileResponse } = useProfile();
+  const { data: activityLogsResponse } = useActivityLogs(
+    {
+      actorId: authProfileResponse?.data?.user?.id,
+      limit: 7,
+    },
+    {
+      enabled: !!authProfileResponse?.data?.user?.id,
+      queryKey: [queryKeys.activityLogs.all],
+    }
+  );
+
+  const recentActivities = useMemo(() => {
+    if (!activityLogsResponse?.data) {
+      return getDefaultActivities();
+    }
+
+    return transformActivityLogs(activityLogsResponse.data);
+  }, [activityLogsResponse?.data]);
+
+  const userProfileData = useMemo(() => {
+    return authProfileResponse?.data?.user || null;
+  }, [authProfileResponse?.data?.user]);
+
   const getInitials = () => {
     if (!userProfileData) return null;
-    if (userProfileData.profilePicture) return null;
+    if (userProfileData.avatarUrl) return null;
     return (
       userProfileData.firstName[0] + userProfileData.lastName[0]
     ).toUpperCase();
   };
 
-  // Calculate owned, collaborated, and pending counts from userTravels
+  const [location, setLocation] = useState<Coordinates>({
+    latitude: 0,
+    longitude: 0,
+  });
+
+  useEffect(() => {
+    const getLocation = async () => {
+      const location = await getCurrentLocation();
+
+      if (location.latitude && location.latitude) setLocation(location);
+    };
+
+    getLocation();
+  }, []);
+
+  const {
+    data: weatherResponse,
+    isLoading: weatherLoading,
+    error: weatherError,
+  } = useWeather({ lat: location.latitude, lng: location.longitude });
+
+  const weatherData = weatherResponse?.data;
+
+  useEffect(() => {
+    if (weatherData?.name) {
+      setSelectedLocation(weatherData.name);
+    }
+  }, [weatherData]);
+
   const ownedTravelCount = userTravels.filter(
     (travel) => travel.ownership === "owned" && travel.status === "in-progress"
   ).length;
@@ -125,7 +178,7 @@ export function UserHome() {
   };
 
   // Bookings data from UserBookings.tsx
-  const upcomingBookings = [];
+  const upcomingBookings: any[] = [];
 
   // Historical completed trips data from UserHistory.tsx
   const completedTripsData = [
@@ -408,17 +461,20 @@ export function UserHome() {
   // Close emoji picker when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (emojiPickerRef.current && !emojiPickerRef.current.contains(event.target as Node)) {
+      if (
+        emojiPickerRef.current &&
+        !emojiPickerRef.current.contains(event.target as Node)
+      ) {
         setShowEmojiPicker(false);
       }
     };
 
     if (showEmojiPicker) {
-      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener("mousedown", handleClickOutside);
     }
 
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [showEmojiPicker]);
 
@@ -426,15 +482,15 @@ export function UserHome() {
   useEffect(() => {
     const applyLinkStyles = () => {
       if (messageRef.current) {
-        const links = messageRef.current.querySelectorAll('a');
-        links.forEach(link => {
-          link.style.color = '#3b82f6';
-          link.style.textDecoration = 'underline';
-          link.style.textDecorationStyle = 'dashed';
-          link.style.textUnderlineOffset = '2px';
-          link.target = '_blank';
-          link.rel = 'noopener noreferrer';
-          link.classList.add('link-element');
+        const links = messageRef.current.querySelectorAll("a");
+        links.forEach((link) => {
+          link.style.color = "#3b82f6";
+          link.style.textDecoration = "underline";
+          link.style.textDecorationStyle = "dashed";
+          link.style.textUnderlineOffset = "2px";
+          link.target = "_blank";
+          link.rel = "noopener noreferrer";
+          link.classList.add("link-element");
         });
       }
     };
@@ -446,7 +502,7 @@ export function UserHome() {
         childList: true,
         subtree: true,
         attributes: true,
-        characterData: true
+        characterData: true,
       });
     }
 
@@ -494,10 +550,16 @@ export function UserHome() {
 
   const handleWeatherSearch = () => {
     if (searchLocation.trim()) {
+      // In a real implementation, you would:
+      // 1. Call a geocoding API to convert location name to coordinates
+      // 2. Then call useWeather with those coordinates
+
+      // For now, just update the displayed location name
       setSelectedLocation(searchLocation);
       setSearchLocation("");
-      toast.success("Weather updated!", {
-        description: `Showing forecast for ${searchLocation}`,
+
+      toast.info("Search feature coming soon!", {
+        description: `Currently showing weather for your current location. Full search will be available soon.`,
       });
     }
   };
@@ -505,38 +567,38 @@ export function UserHome() {
   // Update all formatting indicator states
   const updateFormattingIndicators = () => {
     if (document.queryCommandState) {
-      setIsBold(document.queryCommandState('bold'));
-      setIsItalic(document.queryCommandState('italic'));
-      setIsUnderline(document.queryCommandState('underline'));
-      
+      setIsBold(document.queryCommandState("bold"));
+      setIsItalic(document.queryCommandState("italic"));
+      setIsUnderline(document.queryCommandState("underline"));
+
       // Check if cursor is inside a list
       const selection = window.getSelection();
       if (selection && selection.rangeCount > 0) {
         const range = selection.getRangeAt(0);
         let node = range.commonAncestorContainer;
-        
+
         // Go up through parent nodes to find list elements
         while (node && node.nodeType !== Node.ELEMENT_NODE) {
           node = node.parentNode;
         }
-        
+
         if (node) {
           let currentNode = node as Element;
           let isInUL = false;
           let isInOL = false;
-          
+
           while (currentNode && currentNode !== document.body) {
-            if (currentNode.tagName === 'UL') {
+            if (currentNode.tagName === "UL") {
               isInUL = true;
               break;
             }
-            if (currentNode.tagName === 'OL') {
+            if (currentNode.tagName === "OL") {
               isInOL = true;
               break;
             }
             currentNode = currentNode.parentElement as Element;
           }
-          
+
           setIsBulletList(isInUL);
           setIsNumberedList(isInOL);
         } else {
@@ -547,10 +609,10 @@ export function UserHome() {
         setIsBulletList(false);
         setIsNumberedList(false);
       }
-      
+
       // Update text alignment
       if (messageRef.current) {
-        const textAlignStyle = messageRef.current.style.textAlign || 'left';
+        const textAlignStyle = messageRef.current.style.textAlign || "left";
         if (textAlignStyle !== textAlign) {
           setTextAlign(textAlignStyle as "left" | "center" | "right");
         }
@@ -563,13 +625,13 @@ export function UserHome() {
     if (messageRef.current) {
       // Focus the editor
       messageRef.current.focus();
-      
+
       // Execute command
       document.execCommand(command, false, value);
-      
+
       // Update indicators
       updateFormattingIndicators();
-      
+
       // Update content
       if (messageRef.current.innerHTML !== contactMessage) {
         setContactMessage(messageRef.current.innerHTML);
@@ -583,11 +645,11 @@ export function UserHome() {
       messageRef.current.focus();
       setTextAlign(alignment);
       messageRef.current.style.textAlign = alignment;
-      
+
       // Show visual indicator
       setShowTextAlignIndicator(true);
       setTimeout(() => setShowTextAlignIndicator(false), 1000);
-      
+
       // Update formatting indicators
       updateFormattingIndicators();
       setContactMessage(messageRef.current.innerHTML);
@@ -595,26 +657,26 @@ export function UserHome() {
   };
 
   // FIXED: Proper list insertion function - now inserts actual bullets/numbers
-  const handleListInsert = (type: 'unordered' | 'ordered') => {
+  const handleListInsert = (type: "unordered" | "ordered") => {
     if (messageRef.current) {
       messageRef.current.focus();
-      
+
       const selection = window.getSelection();
       if (selection && selection.rangeCount > 0) {
         const range = selection.getRangeAt(0);
-        
+
         // Check if we're already in a list
         let node = range.commonAncestorContainer;
         while (node && node.nodeType !== Node.ELEMENT_NODE) {
           node = node.parentNode;
         }
-        
+
         if (node) {
           let currentNode = node as Element;
           while (currentNode && currentNode !== document.body) {
-            if (currentNode.tagName === 'UL' || currentNode.tagName === 'OL') {
+            if (currentNode.tagName === "UL" || currentNode.tagName === "OL") {
               // We're already in a list, toggle it off
-              document.execCommand('outdent');
+              document.execCommand("outdent");
               updateFormattingIndicators();
               setContactMessage(messageRef.current.innerHTML);
               return;
@@ -622,20 +684,25 @@ export function UserHome() {
             currentNode = currentNode.parentElement as Element;
           }
         }
-        
+
         // If text is selected, use the browser's built-in list command
         if (!range.collapsed) {
-          document.execCommand(type === 'unordered' ? 'insertUnorderedList' : 'insertOrderedList');
+          document.execCommand(
+            type === "unordered" ? "insertUnorderedList" : "insertOrderedList"
+          );
         } else {
           // If no text is selected, just execute the command - browser will handle it
-          document.execCommand(type === 'unordered' ? 'insertUnorderedList' : 'insertOrderedList');
+          document.execCommand(
+            type === "unordered" ? "insertUnorderedList" : "insertOrderedList"
+          );
         }
       } else {
         // Fallback for when there's no selection
-        const command = type === 'unordered' ? 'insertUnorderedList' : 'insertOrderedList';
+        const command =
+          type === "unordered" ? "insertUnorderedList" : "insertOrderedList";
         document.execCommand(command, false);
       }
-      
+
       updateFormattingIndicators();
       setContactMessage(messageRef.current.innerHTML);
     }
@@ -643,20 +710,20 @@ export function UserHome() {
 
   // FIXED: Tab indentation function
   const handleTabIndent = (e: React.KeyboardEvent) => {
-    if (e.key === 'Tab') {
+    if (e.key === "Tab") {
       e.preventDefault();
-      
+
       if (messageRef.current) {
         messageRef.current.focus();
-        
+
         if (e.shiftKey) {
           // Shift+Tab for outdent
-          document.execCommand('outdent');
+          document.execCommand("outdent");
         } else {
           // Tab for indent
-          document.execCommand('indent');
+          document.execCommand("indent");
         }
-        
+
         updateFormattingIndicators();
         setContactMessage(messageRef.current.innerHTML);
       }
@@ -666,7 +733,7 @@ export function UserHome() {
   const insertEmoji = (emojiData: EmojiClickData) => {
     if (messageRef.current) {
       messageRef.current.focus();
-      
+
       // Insert emoji at cursor position
       const selection = window.getSelection();
       if (selection && selection.rangeCount > 0) {
@@ -682,7 +749,7 @@ export function UserHome() {
         // Fallback: append at end
         messageRef.current.innerHTML += emojiData.emoji;
       }
-      
+
       setContactMessage(messageRef.current.innerHTML);
       updateFormattingIndicators();
     }
@@ -690,53 +757,59 @@ export function UserHome() {
 
   const handleFileAttach = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || []);
-    
+
     // Validate file types and size
-    const validFiles = files.filter(file => {
+    const validFiles = files.filter((file) => {
       const maxSize = 10 * 1024 * 1024; // 10MB
       const allowedTypes = [
-        'image/jpeg', 'image/png', 'image/gif', 'image/webp',
-        'application/pdf', 'application/msword',
-        'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        "image/jpeg",
+        "image/png",
+        "image/gif",
+        "image/webp",
+        "application/pdf",
+        "application/msword",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
       ];
-      
+
       if (file.size > maxSize) {
         toast.error(`File too large: ${file.name}`, {
           description: `Maximum file size is 10MB`,
         });
         return false;
       }
-      
+
       if (!allowedTypes.includes(file.type)) {
         toast.error(`Invalid file type: ${file.name}`, {
           description: `Allowed types: Images, PDF, Word documents`,
         });
         return false;
       }
-      
+
       return true;
     });
-    
+
     if (validFiles.length > 0) {
-      setAttachedFiles(prev => [...prev, ...validFiles]);
+      setAttachedFiles((prev) => [...prev, ...validFiles]);
       toast.success(`${validFiles.length} file(s) attached successfully`, {
-        description: `Total attached files: ${attachedFiles.length + validFiles.length}`,
+        description: `Total attached files: ${
+          attachedFiles.length + validFiles.length
+        }`,
       });
     }
-    
+
     // Reset input
     if (fileInputRef.current) {
-      fileInputRef.current.value = '';
+      fileInputRef.current.value = "";
     }
   };
 
   const removeAttachedFile = (index: number) => {
-    setAttachedFiles(prev => prev.filter((_, i) => i !== index));
+    setAttachedFiles((prev) => prev.filter((_, i) => i !== index));
   };
 
   const previewAttachedFile = (file: File) => {
     setPreviewFile(file);
-    
+
     // Create object URL for preview
     const url = URL.createObjectURL(file);
     setPreviewFileUrl(url);
@@ -745,17 +818,17 @@ export function UserHome() {
 
   const downloadFile = () => {
     if (!previewFile) return;
-    
+
     try {
       const url = URL.createObjectURL(previewFile);
-      const a = document.createElement('a');
+      const a = document.createElement("a");
       a.href = url;
       a.download = previewFile.name;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      
+
       toast.success("Download started", {
         description: `Downloading ${previewFile.name}`,
       });
@@ -783,20 +856,24 @@ export function UserHome() {
 
     try {
       // Simulate API call to send email
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await new Promise((resolve) => setTimeout(resolve, 2000));
 
       // In a real app, this would be an API call to your backend
       const emailData = {
-        to: '4bstravelandtours.bondvoyage@gmail.com',
+        to: "4bstravelandtours.bondvoyage@gmail.com",
         from: `${userProfile.firstName} ${userProfile.lastName} <${userProfile.email}>`,
         subject: contactSubject,
         message: contactMessage,
-        attachments: attachedFiles.length
+        attachments: attachedFiles.length,
       };
 
       // Show success message
       toast.success("Email sent successfully!", {
-        description: `Your message has been sent to 4B's Travel and Tours. ${attachedFiles.length > 0 ? `(${attachedFiles.length} attachment(s) included)` : ''}`,
+        description: `Your message has been sent to 4B's Travel and Tours. ${
+          attachedFiles.length > 0
+            ? `(${attachedFiles.length} attachment(s) included)`
+            : ""
+        }`,
         duration: 5000,
       });
 
@@ -809,10 +886,10 @@ export function UserHome() {
         messageRef.current.innerHTML = "";
         messageRef.current.style.textAlign = "left";
       }
-      
     } catch (error) {
       toast.error("Failed to send email", {
-        description: "Please try again or contact support if the issue persists",
+        description:
+          "Please try again or contact support if the issue persists",
       });
     } finally {
       setIsSending(false);
@@ -826,7 +903,7 @@ export function UserHome() {
         URL.revokeObjectURL(previewFileUrl);
       }
       // Clean up all file URLs
-      attachedFiles.forEach(file => {
+      attachedFiles.forEach((file) => {
         URL.revokeObjectURL(URL.createObjectURL(file));
       });
     };
@@ -834,9 +911,9 @@ export function UserHome() {
 
   // Get file type icon
   const getFileIcon = (file: File) => {
-    if (file.type.startsWith('image/')) {
+    if (file.type.startsWith("image/")) {
       return <ImageIcon className="h-5 w-5 text-blue-500" />;
-    } else if (file.type === 'application/pdf') {
+    } else if (file.type === "application/pdf") {
       return <FileText className="h-5 w-5 text-red-500" />;
     } else {
       return <File className="h-5 w-5 text-purple-500" />;
@@ -845,9 +922,9 @@ export function UserHome() {
 
   // Get file type name
   const getFileTypeName = (file: File) => {
-    if (file.type.startsWith('image/')) {
+    if (file.type.startsWith("image/")) {
       return "IMAGE";
-    } else if (file.type === 'application/pdf') {
+    } else if (file.type === "application/pdf") {
       return "PDF";
     } else {
       return "DOCUMENT";
@@ -856,9 +933,9 @@ export function UserHome() {
 
   // Get icon for file preview modal
   const getFilePreviewIcon = (file: File) => {
-    if (file.type.startsWith('image/')) {
+    if (file.type.startsWith("image/")) {
       return <ImageIcon className="h-5 w-5 text-white" />;
-    } else if (file.type === 'application/pdf') {
+    } else if (file.type === "application/pdf") {
       return <FileText className="h-5 w-5 text-white" />;
     } else {
       return <File className="h-5 w-5 text-white" />;
@@ -886,14 +963,14 @@ export function UserHome() {
             <div className="relative flex-shrink-0">
               <div
                 className={`w-30 h-30 sm:w-34 sm:h-34 rounded-full border-4 border-white shadow-[0_8px_24px_rgba(0,0,0,0.15)] overflow-hidden ${
-                  userProfileData && userProfileData.profilePicture
+                  userProfileData && userProfileData.avatarUrl
                     ? ""
                     : "bg-primary"
                 }`}
               >
-                {userProfileData && userProfileData.profilePicture ? (
+                {userProfileData && userProfileData.avatarUrl ? (
                   <img
-                    src={userProfileData.profilePicture}
+                    src={userProfileData.avatarUrl}
                     alt="Profile"
                     className="w-full h-full object-cover"
                   />
@@ -951,7 +1028,7 @@ export function UserHome() {
           </div>
 
           {/* Right Side - Interactive Traveling Avatar */}
-          <div className="flex-shrink-0 w-full lg:w-1/2 min-w-[280px] sm:min-w-[320px] hidden md:block">
+          <div className="flex-shrink-0 flex-1 w-full lg:w-1/2 min-w-[280px] sm:min-w-[320px]">
             <AdventureAvatar />
           </div>
         </div>
@@ -992,6 +1069,7 @@ export function UserHome() {
       {/* Recent Activity & Weather Widget */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Weather Widget - Right Half */}
+        {/* Weather Widget - Right Half */}
         <ContentCard title="Weather">
           <div className="space-y-4">
             {/* Search Bar */}
@@ -1018,50 +1096,209 @@ export function UserHome() {
                     "linear-gradient(135deg, var(--gradient-from), var(--gradient-to))",
                   color: "white",
                 }}
+                disabled={weatherLoading}
               >
-                Search
+                {weatherLoading ? "Loading..." : "Search"}
               </button>
             </div>
 
             <div className="text-sm text-muted-foreground text-center">
-              Showing weather for:{" "}
-              <span className="text-primary font-semibold">
-                {selectedLocation}
-              </span>
+              {weatherLoading ? (
+                <div className="flex items-center justify-center gap-2">
+                  <div className="w-3 h-3 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                  Loading weather data...
+                </div>
+              ) : weatherError ? (
+                <div className="flex items-center justify-center gap-2 text-red-500">
+                  <Cloud className="w-4 h-4" />
+                  Error loading weather data
+                </div>
+              ) : weatherData ? (
+                <>
+                  Showing weather for:{" "}
+                  <span className="text-primary font-semibold">
+                    {selectedLocation}
+                  </span>
+                  <div className="text-xs mt-1">
+                    Coordinates: {weatherData.coord.lat.toFixed(2)}°N,{" "}
+                    {weatherData.coord.lon.toFixed(2)}°E
+                  </div>
+                </>
+              ) : (
+                <div className="flex items-center justify-center gap-2 text-amber-500">
+                  <Cloud className="w-4 h-4" />
+                  Weather data unavailable
+                </div>
+              )}
             </div>
 
             {/* Current Weather */}
-            <div
-              className="p-6 rounded-2xl text-white shadow-lg"
-              style={{
-                background: "linear-gradient(135deg, #3B82F6, #2563EB)",
-              }}
-            >
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <p className="text-sm opacity-90 mb-1">Today</p>
-                  <h2 className="text-4xl mb-1">28°C</h2>
-                  <p className="text-sm opacity-90">Partly Cloudy</p>
+            {weatherData ? (
+              <div
+                className="p-6 rounded-2xl text-white shadow-lg"
+                style={{
+                  background: "linear-gradient(135deg, #3B82F6, #2563EB)",
+                }}
+              >
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <p className="text-sm opacity-90 mb-1">Today</p>
+                    <h2 className="text-4xl mb-1">
+                      {Math.round(weatherData.main.temp)}°C
+                    </h2>
+                    <p className="text-sm opacity-90 capitalize">
+                      {weatherData.weather[0]?.description || "Clear sky"}
+                    </p>
+                    <p className="text-sm opacity-75 mt-1">
+                      Feels like: {Math.round(weatherData.main.feels_like)}°C
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <div className="w-16 h-16 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center mb-2">
+                      {weatherData.weather[0]?.icon?.includes("01") ? (
+                        <Sun
+                          className="w-10 h-10 opacity-90"
+                          strokeWidth={1.5}
+                        />
+                      ) : weatherData.weather[0]?.icon?.includes("02") ||
+                        weatherData.weather[0]?.icon?.includes("03") ||
+                        weatherData.weather[0]?.icon?.includes("04") ? (
+                        <Cloud
+                          className="w-10 h-10 opacity-90"
+                          strokeWidth={1.5}
+                        />
+                      ) : weatherData.weather[0]?.icon?.includes("09") ||
+                        weatherData.weather[0]?.icon?.includes("10") ||
+                        weatherData.weather[0]?.icon?.includes("11") ? (
+                        <CloudRain
+                          className="w-10 h-10 opacity-90"
+                          strokeWidth={1.5}
+                        />
+                      ) : weatherData.weather[0]?.icon?.includes("13") ? (
+                        <span className="text-2xl">❄️</span>
+                      ) : weatherData.weather[0]?.icon?.includes("50") ? (
+                        <span className="text-2xl">🌫️</span>
+                      ) : (
+                        <Sun
+                          className="w-10 h-10 opacity-90"
+                          strokeWidth={1.5}
+                        />
+                      )}
+                    </div>
+                    <p className="text-xs opacity-75">
+                      {weatherData.weather[0]?.main || "Clear"}
+                    </p>
+                  </div>
                 </div>
-                <Cloud className="w-16 h-16 opacity-80" strokeWidth={1.5} />
+                <div className="grid grid-cols-3 gap-3 text-sm pt-3 border-t border-white/20">
+                  <div>
+                    <p className="opacity-75 mb-1 text-xs">Humidity</p>
+                    <p className="text-base">{weatherData.main.humidity}%</p>
+                  </div>
+                  <div>
+                    <p className="opacity-75 mb-1 text-xs">Wind</p>
+                    <p className="text-base">{weatherData.wind.speed} m/s</p>
+                  </div>
+                  <div>
+                    <p className="opacity-75 mb-1 text-xs">Pressure</p>
+                    <p className="text-base">{weatherData.main.pressure} hPa</p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3 text-xs pt-3">
+                  <div>
+                    <p className="opacity-75 mb-1">Min Temp</p>
+                    <p className="text-sm">
+                      {Math.round(weatherData.main.temp_min)}°C
+                    </p>
+                  </div>
+                  <div>
+                    <p className="opacity-75 mb-1">Max Temp</p>
+                    <p className="text-sm">
+                      {Math.round(weatherData.main.temp_max)}°C
+                    </p>
+                  </div>
+                </div>
               </div>
-              <div className="grid grid-cols-3 gap-3 text-sm pt-3 border-t border-white/20">
-                <div>
-                  <p className="opacity-75 mb-1 text-xs">Humidity</p>
-                  <p className="text-base">75%</p>
-                </div>
-                <div>
-                  <p className="opacity-75 mb-1 text-xs">Wind</p>
-                  <p className="text-base">12 km/h</p>
-                </div>
-                <div>
-                  <p className="opacity-75 mb-1 text-xs">Rain</p>
-                  <p className="text-base">20%</p>
+            ) : weatherLoading ? (
+              <div className="p-6 rounded-2xl text-white shadow-lg bg-gradient-to-r from-gray-400 to-gray-500">
+                <div className="flex items-center justify-center h-40">
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="w-10 h-10 border-4 border-white border-t-transparent rounded-full animate-spin" />
+                    <p className="text-sm opacity-90">
+                      Loading weather data...
+                    </p>
+                  </div>
                 </div>
               </div>
-            </div>
+            ) : weatherError ? (
+              <div className="p-6 rounded-2xl text-white shadow-lg bg-gradient-to-r from-red-400 to-red-500">
+                <div className="flex flex-col items-center justify-center h-40 text-center">
+                  <XCircle className="w-12 h-12 mb-3 opacity-90" />
+                  <p className="font-medium mb-1">Failed to Load Weather</p>
+                  <p className="text-sm opacity-75">
+                    Please try refreshing or check your connection
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="p-6 rounded-2xl text-amber-500 shadow-lg bg-gradient-to-r from-amber-50 to-yellow-50 border border-amber-200">
+                <div className="flex flex-col items-center justify-center h-40 text-center">
+                  <Cloud className="w-12 h-12 mb-3 opacity-60" />
+                  <p className="font-medium mb-1">Weather Unavailable</p>
+                  <p className="text-sm opacity-75">
+                    Please enable location services or search for a location
+                    manually
+                  </p>
+                </div>
+              </div>
+            )}
 
-            {/* 7-Day Forecast - Compact */}
+            {/* Weather Details - Only show when we have data */}
+            {weatherData && (
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-4 rounded-xl bg-accent">
+                <div className="text-center">
+                  <p className="text-xs text-muted-foreground mb-1">
+                    Visibility
+                  </p>
+                  <p className="text-sm font-medium text-card-foreground">
+                    {(weatherData.visibility / 1000).toFixed(1)} km
+                  </p>
+                </div>
+                <div className="text-center">
+                  <p className="text-xs text-muted-foreground mb-1">
+                    Cloudiness
+                  </p>
+                  <p className="text-sm font-medium text-card-foreground">
+                    {weatherData.clouds.all}%
+                  </p>
+                </div>
+                <div className="text-center">
+                  <p className="text-xs text-muted-foreground mb-1">Sunrise</p>
+                  <p className="text-sm font-medium text-card-foreground">
+                    {new Date(
+                      weatherData.sys.sunrise * 1000
+                    ).toLocaleTimeString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </p>
+                </div>
+                <div className="text-center">
+                  <p className="text-xs text-muted-foreground mb-1">Sunset</p>
+                  <p className="text-sm font-medium text-card-foreground">
+                    {new Date(weatherData.sys.sunset * 1000).toLocaleTimeString(
+                      [],
+                      {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      }
+                    )}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* 7-Day Forecast - Using your mock data for now */}
             <div className="grid grid-cols-7 gap-2">
               {forecast.map((day, index) => {
                 const Icon = day.icon;
@@ -1094,6 +1331,7 @@ export function UserHome() {
               className="w-full py-2 text-sm text-primary hover:text-primary/80 transition-colors flex items-center justify-center gap-2 border-t border-border pt-3"
             >
               View Full Forecast
+              <ChevronRight className="w-4 h-4" />
             </button>
           </div>
         </ContentCard>
@@ -1112,56 +1350,78 @@ export function UserHome() {
             </div>
           }
         >
-          <div className="space-y-5">
-            {[
-              {
-                id: "act-1",
-                text: "Booked trip to El Nido, Palawan for December 15-20, 2024",
-                time: "2 days ago",
-              },
-              {
-                id: "act-2",
-                text: "Created new travel plan 'Banaue Rice Terraces Heritage Tour'",
-                time: "5 days ago",
-              },
-              {
-                id: "act-3",
-                text: "Left 5-star review for completed Boracay Island Trip",
-                time: "1 week ago",
-              },
-              {
-                id: "act-4",
-                text: "Submitted inquiry about Coron Island Tour package availability",
-                time: "2 weeks ago",
-              },
-              {
-                id: "act-5",
-                text: "Added collaborators to Siargao Surfing Adventure plan",
-                time: "3 weeks ago",
-              },
-              {
-                id: "act-5",
-                text: "Added collaborators to Siargao Surfing Adventure plan",
-                time: "3 weeks ago",
-              },{
-                id: "act-5",
-                text: "Added collaborators to Siargao Surfing Adventure plan",
-                time: "3 weeks ago",
-              },
-            ].map((activity) => (
-              <div
-                key={activity.id}
-                className="flex items-start gap-3 pb-4 border-b border-border last:border-0 last:pb-0 cursor-default"
-              >
-                <div className="w-2 h-2 mt-2 bg-primary rounded-full" />
-                <div className="flex-1">
-                  <p className="text-card-foreground">{activity.text}</p>
+          <div className="space-y-3 pt-2">
+            {recentActivities.map((activity) => {
+              let iconBgColor = "bg-blue-50";
+              let iconColor = "text-blue-600";
+              let IconComponent = CheckCircle;
+
+              if (activity.icon === "clock") {
+                iconBgColor = "bg-yellow-50";
+                iconColor = "text-yellow-600";
+                IconComponent = Clock;
+              } else if (activity.icon === "cancel") {
+                iconBgColor = "bg-red-50";
+                iconColor = "text-red-600";
+                IconComponent = XCircle;
+              } else if (activity.icon === "itinerary") {
+                iconBgColor = "bg-purple-50";
+                iconColor = "text-purple-600";
+                IconComponent = MapPin;
+              } else if (activity.icon === "user") {
+                iconBgColor = "bg-green-50";
+                iconColor = "text-green-600";
+                IconComponent = Users;
+              } else if (activity.icon === "payment") {
+                iconBgColor = "bg-emerald-50";
+                iconColor = "text-emerald-600";
+                IconComponent = TrendingUp;
+              }
+
+              return (
+                <div
+                  key={activity.id}
+                  className="group rounded-xl border border-[#E5E7EB] hover:border-[#0A7AFF] bg-white hover:shadow-md transition-all duration-200 p-3 cursor-pointer"
+                  onClick={() => navigate("/user/activity")}
+                >
+                  <div className="flex items-start gap-3">
+                    {/* Icon */}
+                    <div
+                      className={`flex-shrink-0 w-8 h-8 rounded-lg ${iconBgColor} flex items-center justify-center`}
+                    >
+                      <IconComponent className={`w-4 h-4 ${iconColor}`} />
+                    </div>
+
+                    {/* Content */}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900 mb-0.5">
+                        {activity.text}
+                      </p>
+                      {activity.timeAgo && (
+                        <p className="text-xs text-gray-500">
+                          {activity.timeAgo}
+                        </p>
+                      )}
+                    </div>
+                  </div>
                 </div>
-                <span className="text-sm text-muted-foreground">
-                  {activity.time}
-                </span>
+              );
+            })}
+
+            {/* Empty state if no activities */}
+            {recentActivities.length === 0 && (
+              <div className="text-center py-6">
+                <div className="w-12 h-12 mx-auto rounded-xl bg-[#F8FAFB] flex items-center justify-center mb-3">
+                  <Clock className="w-6 h-6 text-[#94A3B8]" />
+                </div>
+                <p className="text-sm text-[#64748B] mb-2">
+                  No recent activity
+                </p>
+                <p className="text-xs text-[#94A3B8]">
+                  Activity will appear here
+                </p>
               </div>
-            ))}
+            )}
           </div>
         </ContentCard>
       </div>
@@ -1188,7 +1448,9 @@ export function UserHome() {
               next adventure!
             </p>
             <button
-              onClick={() => navigate("/user/smart-trip")}
+              onClick={() => {
+                navigate("/user/travels");
+              }}
               className="px-6 py-3 rounded-xl transition-all shadow-md hover:shadow-lg flex items-center gap-2"
               style={{
                 background:
@@ -1351,28 +1613,40 @@ export function UserHome() {
             <label className="block text-sm font-medium text-card-foreground px-4 pt-4 mb-2">
               Message
             </label>
-            
+
             {/* Enhanced Toolbar with Text Alignment */}
             <div className="flex flex-wrap items-center gap-1 p-3 bg-accent border-b border-border">
               {/* Font Formatting with Indicators */}
               <div className="flex items-center gap-1 border-r border-border pr-2">
                 <button
-                  onClick={() => handleFormat('bold')}
-                  className={`w-9 h-9 flex items-center justify-center rounded transition-all ${isBold ? 'bg-primary/20 text-primary border border-primary/30' : 'hover:bg-card border border-transparent'}`}
+                  onClick={() => handleFormat("bold")}
+                  className={`w-9 h-9 flex items-center justify-center rounded transition-all ${
+                    isBold
+                      ? "bg-primary/20 text-primary border border-primary/30"
+                      : "hover:bg-card border border-transparent"
+                  }`}
                   title="Bold (Ctrl+B)"
                 >
                   <Bold className="w-4 h-4" />
                 </button>
                 <button
-                  onClick={() => handleFormat('italic')}
-                  className={`w-9 h-9 flex items-center justify-center rounded transition-all ${isItalic ? 'bg-primary/20 text-primary border border-primary/30' : 'hover:bg-card border border-transparent'}`}
+                  onClick={() => handleFormat("italic")}
+                  className={`w-9 h-9 flex items-center justify-center rounded transition-all ${
+                    isItalic
+                      ? "bg-primary/20 text-primary border border-primary/30"
+                      : "hover:bg-card border border-transparent"
+                  }`}
                   title="Italic (Ctrl+I)"
                 >
                   <Italic className="w-4 h-4" />
                 </button>
                 <button
-                  onClick={() => handleFormat('underline')}
-                  className={`w-9 h-9 flex items-center justify-center rounded transition-all ${isUnderline ? 'bg-primary/20 text-primary border border-primary/30' : 'hover:bg-card border border-transparent'}`}
+                  onClick={() => handleFormat("underline")}
+                  className={`w-9 h-9 flex items-center justify-center rounded transition-all ${
+                    isUnderline
+                      ? "bg-primary/20 text-primary border border-primary/30"
+                      : "hover:bg-card border border-transparent"
+                  }`}
                   title="Underline (Ctrl+U)"
                 >
                   <Underline className="w-4 h-4" />
@@ -1382,15 +1656,23 @@ export function UserHome() {
               {/* FIXED: Lists with proper indicators */}
               <div className="flex items-center gap-1 border-r border-border pr-2">
                 <button
-                  onClick={() => handleListInsert('unordered')}
-                  className={`w-9 h-9 flex items-center justify-center rounded transition-all ${isBulletList ? 'bg-primary/20 text-primary border border-primary/30' : 'hover:bg-card border border-transparent'}`}
+                  onClick={() => handleListInsert("unordered")}
+                  className={`w-9 h-9 flex items-center justify-center rounded transition-all ${
+                    isBulletList
+                      ? "bg-primary/20 text-primary border border-primary/30"
+                      : "hover:bg-card border border-transparent"
+                  }`}
                   title="Bulleted List"
                 >
                   <List className="w-4 h-4" />
                 </button>
                 <button
-                  onClick={() => handleListInsert('ordered')}
-                  className={`w-9 h-9 flex items-center justify-center rounded transition-all ${isNumberedList ? 'bg-primary/20 text-primary border border-primary/30' : 'hover:bg-card border border-transparent'}`}
+                  onClick={() => handleListInsert("ordered")}
+                  className={`w-9 h-9 flex items-center justify-center rounded transition-all ${
+                    isNumberedList
+                      ? "bg-primary/20 text-primary border border-primary/30"
+                      : "hover:bg-card border border-transparent"
+                  }`}
                   title="Numbered List"
                 >
                   <ListOrdered className="w-4 h-4" />
@@ -1401,21 +1683,33 @@ export function UserHome() {
               <div className="flex items-center gap-1 border-r border-border pr-2">
                 <button
                   onClick={() => handleTextAlignment("left")}
-                  className={`w-9 h-9 flex items-center justify-center rounded transition-all ${textAlign === "left" ? 'bg-primary/20 text-primary border border-primary/30' : 'hover:bg-card border border-transparent'}`}
+                  className={`w-9 h-9 flex items-center justify-center rounded transition-all ${
+                    textAlign === "left"
+                      ? "bg-primary/20 text-primary border border-primary/30"
+                      : "hover:bg-card border border-transparent"
+                  }`}
                   title="Align Left"
                 >
                   <AlignLeft className="w-4 h-4" />
                 </button>
                 <button
                   onClick={() => handleTextAlignment("center")}
-                  className={`w-9 h-9 flex items-center justify-center rounded transition-all ${textAlign === "center" ? 'bg-primary/20 text-primary border border-primary/30' : 'hover:bg-card border border-transparent'}`}
+                  className={`w-9 h-9 flex items-center justify-center rounded transition-all ${
+                    textAlign === "center"
+                      ? "bg-primary/20 text-primary border border-primary/30"
+                      : "hover:bg-card border border-transparent"
+                  }`}
                   title="Align Center"
                 >
                   <AlignCenter className="w-4 h-4" />
                 </button>
                 <button
                   onClick={() => handleTextAlignment("right")}
-                  className={`w-9 h-9 flex items-center justify-center rounded transition-all ${textAlign === "right" ? 'bg-primary/20 text-primary border border-primary/30' : 'hover:bg-card border border-transparent'}`}
+                  className={`w-9 h-9 flex items-center justify-center rounded transition-all ${
+                    textAlign === "right"
+                      ? "bg-primary/20 text-primary border border-primary/30"
+                      : "hover:bg-card border border-transparent"
+                  }`}
                   title="Align Right"
                 >
                   <AlignRight className="w-4 h-4" />
@@ -1425,21 +1719,25 @@ export function UserHome() {
               {/* Enhanced Font Options */}
               <div className="flex items-center gap-2 border-r border-border pr-2">
                 <select
-                  onChange={(e) => handleFormat('fontName', e.target.value)}
+                  onChange={(e) => handleFormat("fontName", e.target.value)}
                   className="px-2 py-1.5 bg-card border border-border rounded text-xs focus:outline-none focus:ring-1 focus:ring-primary hover:border-primary/50 transition-colors"
                 >
                   <option value="Arial, sans-serif">Arial</option>
                   <option value="'Segoe UI', sans-serif">Segoe UI</option>
-                  <option value="'Helvetica Neue', sans-serif">Helvetica</option>
+                  <option value="'Helvetica Neue', sans-serif">
+                    Helvetica
+                  </option>
                   <option value="Georgia, serif">Georgia</option>
-                  <option value="'Times New Roman', serif">Times New Roman</option>
+                  <option value="'Times New Roman', serif">
+                    Times New Roman
+                  </option>
                   <option value="'Courier New', monospace">Courier New</option>
                   <option value="'Inter', sans-serif">Inter</option>
                   <option value="'Roboto', sans-serif">Roboto</option>
                   <option value="'Open Sans', sans-serif">Open Sans</option>
                 </select>
                 <select
-                  onChange={(e) => handleFormat('fontSize', e.target.value)}
+                  onChange={(e) => handleFormat("fontSize", e.target.value)}
                   className="px-2 py-1.5 bg-card border border-border rounded text-xs focus:outline-none focus:ring-1 focus:ring-primary hover:border-primary/50 transition-colors"
                 >
                   <option value="1">8px</option>
@@ -1456,7 +1754,7 @@ export function UserHome() {
               <div className="flex items-center gap-1 border-r border-border pr-2">
                 <input
                   type="color"
-                  onChange={(e) => handleFormat('foreColor', e.target.value)}
+                  onChange={(e) => handleFormat("foreColor", e.target.value)}
                   className="w-9 h-9 cursor-pointer rounded border border-border hover:border-primary transition-colors"
                   title="Text Color"
                 />
@@ -1467,9 +1765,9 @@ export function UserHome() {
                 <button
                   onClick={() => setShowEmojiPicker(!showEmojiPicker)}
                   className={`w-9 h-9 flex items-center justify-center rounded transition-all border ${
-                    showEmojiPicker 
-                      ? 'bg-primary/20 text-primary border-primary/30' 
-                      : 'hover:bg-card border-transparent hover:border-border'
+                    showEmojiPicker
+                      ? "bg-primary/20 text-primary border-primary/30"
+                      : "hover:bg-card border-transparent hover:border-border"
                   }`}
                   title="Insert Emoji"
                 >
@@ -1509,9 +1807,9 @@ export function UserHome() {
                 <button
                   onClick={() => fileInputRef.current?.click()}
                   className={`w-9 h-9 flex items-center justify-center rounded transition-all border ${
-                    attachedFiles.length > 0 
-                      ? 'bg-primary/20 text-primary border-primary/30' 
-                      : 'hover:bg-card border-transparent hover:border-border'
+                    attachedFiles.length > 0
+                      ? "bg-primary/20 text-primary border-primary/30"
+                      : "hover:bg-card border-transparent hover:border-border"
                   }`}
                   title="Attach File"
                 >
@@ -1554,24 +1852,33 @@ export function UserHome() {
               onKeyUp={updateFormattingIndicators}
               onMouseUp={updateFormattingIndicators}
               style={{
-                whiteSpace: 'pre-wrap',
-                wordBreak: 'break-word',
+                whiteSpace: "pre-wrap",
+                wordBreak: "break-word",
                 textAlign: textAlign,
               }}
             />
-            
+
             <div className="px-4 py-2 border-t border-border bg-accent/50">
               <div className="text-xs text-muted-foreground flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="flex items-center gap-1">
                     <Check className="w-3 h-3 text-green-500" />
-                    <kbd className="px-1.5 py-0.5 bg-card border border-border rounded text-xs">Tab</kbd> to indent
+                    <kbd className="px-1.5 py-0.5 bg-card border border-border rounded text-xs">
+                      Tab
+                    </kbd>{" "}
+                    to indent
                   </span>
                   <span className="hidden sm:inline">•</span>
                   <span>Shortcuts:</span>
-                  <kbd className="px-1.5 py-0.5 bg-card border border-border rounded text-xs">Ctrl+B</kbd>
-                  <kbd className="px-1.5 py-0.5 bg-card border border-border rounded text-xs">Ctrl+I</kbd>
-                  <kbd className="px-1.5 py-0.5 bg-card border border-border rounded text-xs">Ctrl+U</kbd>
+                  <kbd className="px-1.5 py-0.5 bg-card border border-border rounded text-xs">
+                    Ctrl+B
+                  </kbd>
+                  <kbd className="px-1.5 py-0.5 bg-card border border-border rounded text-xs">
+                    Ctrl+I
+                  </kbd>
+                  <kbd className="px-1.5 py-0.5 bg-card border border-border rounded text-xs">
+                    Ctrl+U
+                  </kbd>
                 </div>
                 <div className="text-right">
                   {attachedFiles.length} file(s) attached • Click to preview
@@ -1638,7 +1945,8 @@ export function UserHome() {
                     Attached Files ({attachedFiles.length})
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    Click on any file to preview • Files will be included with your email
+                    Click on any file to preview • Files will be included with
+                    your email
                   </p>
                 </div>
                 <button
@@ -1656,13 +1964,15 @@ export function UserHome() {
                     className="flex items-center justify-between p-4 bg-card rounded-lg border border-border hover:border-primary/30 hover:shadow-md transition-all cursor-pointer group"
                   >
                     <div className="flex items-center gap-3 min-w-0">
-                      <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${
-                        file.type.startsWith('image/') 
-                          ? 'bg-blue-500/10 text-blue-500' 
-                          : file.type === 'application/pdf'
-                          ? 'bg-red-500/10 text-red-500'
-                          : 'bg-purple-500/10 text-purple-500'
-                      }`}>
+                      <div
+                        className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                          file.type.startsWith("image/")
+                            ? "bg-blue-500/10 text-blue-500"
+                            : file.type === "application/pdf"
+                            ? "bg-red-500/10 text-red-500"
+                            : "bg-purple-500/10 text-purple-500"
+                        }`}
+                      >
                         {getFileIcon(file)}
                       </div>
                       <div className="min-w-0">
@@ -1670,7 +1980,8 @@ export function UserHome() {
                           {file.name}
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          {(file.size / 1024).toFixed(1)}KB • {getFileTypeName(file)}
+                          {(file.size / 1024).toFixed(1)}KB •{" "}
+                          {getFileTypeName(file)}
                         </p>
                       </div>
                     </div>
@@ -1727,11 +2038,19 @@ export function UserHome() {
               </button>
               <button
                 onClick={handleSendEmail}
-                disabled={isSending || (!contactSubject.trim() && !contactMessage.trim() && attachedFiles.length === 0)}
+                disabled={
+                  isSending ||
+                  (!contactSubject.trim() &&
+                    !contactMessage.trim() &&
+                    attachedFiles.length === 0)
+                }
                 className={`px-6 py-2.5 rounded-xl transition-all shadow-md hover:shadow-lg flex items-center gap-2 min-w-[140px] justify-center ${
-                  isSending || (!contactSubject.trim() && !contactMessage.trim() && attachedFiles.length === 0)
-                    ? 'opacity-50 cursor-not-allowed'
-                    : 'hover:scale-105 active:scale-95'
+                  isSending ||
+                  (!contactSubject.trim() &&
+                    !contactMessage.trim() &&
+                    attachedFiles.length === 0)
+                    ? "opacity-50 cursor-not-allowed"
+                    : "hover:scale-105 active:scale-95"
                 }`}
                 style={{
                   background:
@@ -1757,9 +2076,10 @@ export function UserHome() {
           {/* Help Text */}
           <div className="p-4 rounded-lg bg-gradient-to-r from-blue-500/5 to-primary/5 border border-primary/20">
             <p className="text-sm text-muted-foreground">
-              <strong>💡 Pro Tip:</strong> For urgent inquiries, mention "URGENT" in the subject line. 
-              Attach travel documents, photos, or itineraries if needed. 
-              Your email will be sent directly to 4B's Travel and Tours support team.
+              <strong>💡 Pro Tip:</strong> For urgent inquiries, mention
+              "URGENT" in the subject line. Attach travel documents, photos, or
+              itineraries if needed. Your email will be sent directly to 4B's
+              Travel and Tours support team.
             </p>
           </div>
         </div>
@@ -1769,18 +2089,24 @@ export function UserHome() {
           open={showFilePreview}
           onOpenChange={setShowFilePreview}
           title="File Preview"
-          icon={previewFile ? getFilePreviewIcon(previewFile) : <Eye className="h-5 w-5 text-white" />}
+          icon={
+            previewFile ? (
+              getFilePreviewIcon(previewFile)
+            ) : (
+              <Eye className="h-5 w-5 text-white" />
+            )
+          }
           iconGradient={
-            previewFile?.type.startsWith('image/') 
+            previewFile?.type.startsWith("image/")
               ? "bg-gradient-to-r from-blue-500 to-cyan-500"
-              : previewFile?.type === 'application/pdf'
+              : previewFile?.type === "application/pdf"
               ? "bg-gradient-to-r from-red-500 to-orange-500"
               : "bg-gradient-to-r from-purple-500 to-pink-500"
           }
           iconShadow={
-            previewFile?.type.startsWith('image/') 
+            previewFile?.type.startsWith("image/")
               ? "shadow-blue-500/30"
-              : previewFile?.type === 'application/pdf'
+              : previewFile?.type === "application/pdf"
               ? "shadow-red-500/30"
               : "shadow-purple-500/30"
           }
@@ -1804,13 +2130,15 @@ export function UserHome() {
             previewFile && (
               <div className="space-y-4">
                 <div className="flex items-center gap-3 mb-4">
-                  <div className={`h-10 w-10 rounded-lg flex items-center justify-center ${
-                    previewFile.type.startsWith('image/') 
-                      ? 'bg-gradient-to-r from-blue-100 to-cyan-100 dark:from-blue-900/30 dark:to-cyan-900/30' 
-                      : previewFile.type === 'application/pdf'
-                      ? 'bg-gradient-to-r from-red-100 to-orange-100 dark:from-red-900/30 dark:to-orange-900/30'
-                      : 'bg-gradient-to-r from-purple-100 to-pink-100 dark:from-purple-900/30 dark:to-pink-900/30'
-                  }`}>
+                  <div
+                    className={`h-10 w-10 rounded-lg flex items-center justify-center ${
+                      previewFile.type.startsWith("image/")
+                        ? "bg-gradient-to-r from-blue-100 to-cyan-100 dark:from-blue-900/30 dark:to-cyan-900/30"
+                        : previewFile.type === "application/pdf"
+                        ? "bg-gradient-to-r from-red-100 to-orange-100 dark:from-red-900/30 dark:to-orange-900/30"
+                        : "bg-gradient-to-r from-purple-100 to-pink-100 dark:from-purple-900/30 dark:to-pink-900/30"
+                    }`}
+                  >
                     {getFileIcon(previewFile)}
                   </div>
                   <div className="flex-1">
@@ -1818,12 +2146,13 @@ export function UserHome() {
                       {previewFile.name}
                     </h3>
                     <p className="text-sm text-gray-500 dark:text-gray-400">
-                      {(previewFile.size / 1024).toFixed(1)} KB • {getFileTypeName(previewFile)}
+                      {(previewFile.size / 1024).toFixed(1)} KB •{" "}
+                      {getFileTypeName(previewFile)}
                     </p>
                   </div>
                 </div>
-                
-                {previewFile.type.startsWith('image/') ? (
+
+                {previewFile.type.startsWith("image/") ? (
                   <div className="rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
                     <img
                       src={previewFileUrl}
@@ -1831,7 +2160,7 @@ export function UserHome() {
                       className="w-full max-h-[400px] object-contain bg-gray-50 dark:bg-gray-800"
                     />
                   </div>
-                ) : previewFile.type === 'application/pdf' ? (
+                ) : previewFile.type === "application/pdf" ? (
                   <div className="h-[50vh]">
                     <iframe
                       src={previewFileUrl}
@@ -1852,13 +2181,14 @@ export function UserHome() {
                     </div>
                   </div>
                 )}
-                
+
                 <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-700">
                   <div className="text-sm text-gray-500 dark:text-gray-400">
-                    Last modified: {new Date(previewFile.lastModified).toLocaleDateString()}
+                    Last modified:{" "}
+                    {new Date(previewFile.lastModified).toLocaleDateString()}
                   </div>
                   <button
-                    onClick={() => window.open(previewFileUrl, '_blank')}
+                    onClick={() => window.open(previewFileUrl, "_blank")}
                     className="px-4 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors flex items-center gap-2"
                   >
                     <ExternalLink className="h-3 w-3" />

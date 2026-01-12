@@ -6,6 +6,7 @@ import {
   useLocation,
   useNavigate,
   Navigate,
+  ScrollRestoration,
 } from "react-router-dom";
 import { Sidebar } from "./components/Sidebar";
 import { TopNav } from "./components/TopNav";
@@ -55,6 +56,9 @@ import { UserStandardItinerary } from "./pages/user/UserStandardItinerary";
 import HomePage from "./pages/HomePage";
 import { LoadingOverlay } from "./components/LoadingOverlay";
 import { FaqPage } from "./pages/FaqPage";
+import { ProtectedRoute } from "./components/ProtectedRoute";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { ScrollToTop } from "./components/ScrollToTop";
 
 // Utility function to format dates consistently
 export const formatDateRange = (startDate: string, endDate: string): string => {
@@ -128,11 +132,10 @@ export interface BookingData {
   bookingType: string;
   status?: string;
   bookingSource?: "Customized" | "Generated";
-  paymentStatus?: string; // Added for payment status tracking
-  tourType?: string; // Added for tour type tracking
+  paymentStatus?: string;
+  tourType?: string;
 }
 
-// FAQ Types for assistant
 export interface FAQ {
   id: string;
   question: string;
@@ -141,7 +144,6 @@ export interface FAQ {
   tags: string[];
 }
 
-// Layout Component to handle page config and TopNav
 function AppLayout({ children }: { children: React.ReactNode }) {
   const location = useLocation();
   const { currentSide } = useSide();
@@ -158,84 +160,92 @@ function AppLayout({ children }: { children: React.ReactNode }) {
     document.documentElement.classList.toggle("dark", savedTheme === "dark");
   }, []);
 
-  // Initialize FAQ system on app load
   useEffect(() => {
     const initializeFAQSystem = () => {
-      if (!localStorage.getItem('bondvoyage-faqs')) {
+      if (!localStorage.getItem("bondvoyage-faqs")) {
         const defaultFAQs: FAQ[] = [
           {
             id: "FAQ-SYS-001",
             question: "How do I navigate the system?",
-            answer: "Use the sidebar menu to access different sections. You can also use the FAQ Assistant (floating help button) for quick navigation.",
-            lastUpdated: new Date().toISOString().split('T')[0],
-            tags: ["navigation", "system", "help"]
+            answer:
+              "Use the sidebar menu to access different sections. You can also use the FAQ Assistant (floating help button) for quick navigation.",
+            lastUpdated: new Date().toISOString().split("T")[0],
+            tags: ["navigation", "system", "help"],
           },
           {
             id: "FAQ-SYS-002",
             question: "What is the Smart Trip feature?",
-            answer: "Smart Trip uses AI to generate personalized travel itineraries based on your preferences. You can edit and customize the generated trips.",
-            lastUpdated: new Date().toISOString().split('T')[0],
-            tags: ["smart trip", "ai", "itinerary"]
+            answer:
+              "Smart Trip uses AI to generate personalized travel itineraries based on your preferences. You can edit and customize the generated trips.",
+            lastUpdated: new Date().toISOString().split("T")[0],
+            tags: ["smart trip", "ai", "itinerary"],
           },
           {
             id: "FAQ-SYS-003",
             question: "How do I create a new booking?",
-            answer: "Go to Travels → Create New Travel, or browse Standard Itineraries to book pre-designed packages.",
-            lastUpdated: new Date().toISOString().split('T')[0],
-            tags: ["booking", "create", "travel"]
+            answer:
+              "Go to Travels → Create New Travel, or browse Standard Itineraries to book pre-designed packages.",
+            lastUpdated: new Date().toISOString().split("T")[0],
+            tags: ["booking", "create", "travel"],
           },
           {
             id: "FAQ-SYS-004",
             question: "How do I update my profile information?",
-            answer: "Click on your profile picture in the top right corner and select 'Edit Profile' from the dropdown menu.",
-            lastUpdated: new Date().toISOString().split('T')[0],
-            tags: ["profile", "account", "settings"]
+            answer:
+              "Click on your profile picture in the top right corner and select 'Edit Profile' from the dropdown menu.",
+            lastUpdated: new Date().toISOString().split("T")[0],
+            tags: ["profile", "account", "settings"],
           },
           {
             id: "FAQ-SYS-005",
             question: "Where can I view my booking history?",
-            answer: "Navigate to the History page from the sidebar to see all your completed and cancelled trips.",
-            lastUpdated: new Date().toISOString().split('T')[0],
-            tags: ["history", "bookings", "past trips"]
+            answer:
+              "Navigate to the History page from the sidebar to see all your completed and cancelled trips.",
+            lastUpdated: new Date().toISOString().split("T")[0],
+            tags: ["history", "bookings", "past trips"],
           },
           {
             id: "FAQ-SYS-006",
             question: "How do I check weather forecasts?",
-            answer: "Go to the Weather Forecast page to see 7-day forecasts for your destinations. You can add weather info to your itineraries.",
-            lastUpdated: new Date().toISOString().split('T')[0],
-            tags: ["weather", "forecast", "planning"]
+            answer:
+              "Go to the Weather Forecast page to see 7-day forecasts for your destinations. You can add weather info to your itineraries.",
+            lastUpdated: new Date().toISOString().split("T")[0],
+            tags: ["weather", "forecast", "planning"],
           },
           {
             id: "FAQ-SYS-007",
             question: "What are Standard Itineraries?",
-            answer: "Standard Itineraries are pre-designed travel packages created by our experts. They offer complete itineraries for popular destinations.",
-            lastUpdated: new Date().toISOString().split('T')[0],
-            tags: ["standard", "packages", "pre-designed"]
+            answer:
+              "Standard Itineraries are pre-designed travel packages created by our experts. They offer complete itineraries for popular destinations.",
+            lastUpdated: new Date().toISOString().split("T")[0],
+            tags: ["standard", "packages", "pre-designed"],
           },
           {
             id: "FAQ-SYS-008",
             question: "How do I provide feedback?",
-            answer: "Navigate to the Feedback page to share your travel experiences and suggestions. Your feedback helps us improve our services.",
-            lastUpdated: new Date().toISOString().split('T')[0],
-            tags: ["feedback", "reviews", "suggestions"]
+            answer:
+              "Navigate to the Feedback page to share your travel experiences and suggestions. Your feedback helps us improve our services.",
+            lastUpdated: new Date().toISOString().split("T")[0],
+            tags: ["feedback", "reviews", "suggestions"],
           },
           {
             id: "FAQ-SYS-009",
             question: "Where can I see my notifications?",
-            answer: "All system notifications are available in the Notifications page. You can manage notification preferences there.",
-            lastUpdated: new Date().toISOString().split('T')[0],
-            tags: ["notifications", "alerts", "updates"]
+            answer:
+              "All system notifications are available in the Notifications page. You can manage notification preferences there.",
+            lastUpdated: new Date().toISOString().split("T")[0],
+            tags: ["notifications", "alerts", "updates"],
           },
           {
             id: "FAQ-SYS-010",
             question: "How do I use the translation tool?",
-            answer: "The Translation Tool helps you translate between English and local dialects. It's available in the More section.",
-            lastUpdated: new Date().toISOString().split('T')[0],
-            tags: ["translation", "language", "tools"]
-          }
+            answer:
+              "The Translation Tool helps you translate between English and local dialects. It's available in the More section.",
+            lastUpdated: new Date().toISOString().split("T")[0],
+            tags: ["translation", "language", "tools"],
+          },
         ];
-        localStorage.setItem('bondvoyage-faqs', JSON.stringify(defaultFAQs));
-        console.log('FAQ system initialized with default FAQs');
+        localStorage.setItem("bondvoyage-faqs", JSON.stringify(defaultFAQs));
       }
     };
 
@@ -249,13 +259,6 @@ function AppLayout({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    if (location.pathname === "/home") {
-      import("./styles/login.index.css");
-      import("./styles/login.globals.css");
-    } else {
-      import("./styles/globals.css");
-      import("./styles/index.css");
-    }
     setTimeout(() => {
       setIsLoading(false);
     }, 1500);
@@ -496,15 +499,6 @@ function AppLayout({ children }: { children: React.ReactNode }) {
         { label: "Weather" },
       ],
     },
-    "/user/translation": {
-      title: "Translation Tool",
-      subtitle: "Translate between English and local dialects.",
-      breadcrumbs: [
-        { label: "Home", path: "/user/home" },
-        { label: "More" },
-        { label: "Translation" },
-      ],
-    },
     "/user/spin-wheel": {
       title: "Spin the Wheel",
       subtitle: "Can't decide? Let the wheel choose for you!",
@@ -567,6 +561,8 @@ function AppLayout({ children }: { children: React.ReactNode }) {
 
       {/* Main Content Area */}
       <div className="flex-1 lg:ml-20 overflow-y-auto">
+        <ScrollToTop />
+
         {/* Top Navigation - Now shown on all pages including Dashboard */}
         <TopNav
           pageTitle={config.title}
@@ -578,7 +574,7 @@ function AppLayout({ children }: { children: React.ReactNode }) {
 
         {/* Content Area */}
         <main className="p-4 sm:p-6 lg:p-8">
-          <div className="max-w-[1400px] mx-auto">{children}</div>
+          <div className="max-w-350 mx-auto">{children}</div>
         </main>
       </div>
 
@@ -593,7 +589,7 @@ function AppRoutes() {
   const navigate = useNavigate();
   const [activeBookingsCount, setActiveBookingsCount] = useState(0);
   const [bookings, setBookings] = useState<BookingData[]>([]);
-  
+
   const [pendingApprovals, setPendingApprovals] = useState<ApprovalBooking[]>([
     {
       id: "BV-2024-011",
@@ -729,26 +725,29 @@ function AppRoutes() {
 
   // Load bookings from localStorage on initial load
   useEffect(() => {
-    const savedBookings = localStorage.getItem('approvedBookings');
+    const savedBookings = localStorage.getItem("approvedBookings");
     if (savedBookings) {
       try {
         const parsedBookings = JSON.parse(savedBookings);
         setBookings(parsedBookings);
       } catch (error) {
-        console.error('Error loading bookings from localStorage:', error);
+        console.error("Error loading bookings from localStorage:", error);
       }
     }
   }, []);
 
   // Save bookings to localStorage whenever they change
   useEffect(() => {
-    localStorage.setItem('approvedBookings', JSON.stringify(bookings));
+    localStorage.setItem("approvedBookings", JSON.stringify(bookings));
   }, [bookings]);
 
   // Helper function to convert ApprovalBooking to BookingData format
-  const convertApprovalToBooking = (approvalBooking: ApprovalBooking): BookingData => {
-    const totalAmount = parseInt(approvalBooking.total.replace(/[₱,]/g, '')) || 0;
-    
+  const convertApprovalToBooking = (
+    approvalBooking: ApprovalBooking
+  ): BookingData => {
+    const totalAmount =
+      parseInt(approvalBooking.total.replace(/[₱,]/g, "")) || 0;
+
     // Calculate paid amount based on payment status
     let paid = 0;
     if (approvalBooking.paymentStatus === "Paid") {
@@ -756,12 +755,16 @@ function AppRoutes() {
     } else if (approvalBooking.paymentStatus === "Partial") {
       paid = Math.floor(totalAmount / 2);
     }
-    
+
     // Parse dates from the format "February 10, 2026 – February 13, 2026"
-    const dateParts = approvalBooking.dates.split(' – ');
-    const startDate = dateParts[0] ? new Date(dateParts[0]).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
-    const endDate = dateParts[1] ? new Date(dateParts[1]).toISOString().split('T')[0] : startDate;
-    
+    const dateParts = approvalBooking.dates.split(" – ");
+    const startDate = dateParts[0]
+      ? new Date(dateParts[0]).toISOString().split("T")[0]
+      : new Date().toISOString().split("T")[0];
+    const endDate = dateParts[1]
+      ? new Date(dateParts[1]).toISOString().split("T")[0]
+      : startDate;
+
     // Determine booking type from booking source
     let bookingType = "Standard";
     if (approvalBooking.bookingSource === "Customized") {
@@ -769,7 +772,7 @@ function AppRoutes() {
     } else if (approvalBooking.bookingSource === "Generated") {
       bookingType = "Standard";
     }
-    
+
     return {
       id: approvalBooking.id,
       customer: approvalBooking.customer,
@@ -781,7 +784,8 @@ function AppRoutes() {
       travelers: approvalBooking.travelers || 1,
       totalAmount: totalAmount,
       paid: paid,
-      bookedDate: approvalBooking.bookedDate || new Date().toISOString().split('T')[0],
+      bookedDate:
+        approvalBooking.bookedDate || new Date().toISOString().split("T")[0],
       bookingType: bookingType,
       status: "confirmed",
       bookingSource: approvalBooking.bookingSource || "Generated",
@@ -796,10 +800,10 @@ function AppRoutes() {
     const newBooking = convertApprovalToBooking(booking);
 
     // Add to bookings state
-    setBookings(prev => [newBooking, ...prev]);
-    
+    setBookings((prev) => [newBooking, ...prev]);
+
     // Also add to createdBookings if needed
-    setCreatedBookings(prev => [newBooking, ...prev]);
+    setCreatedBookings((prev) => [newBooking, ...prev]);
 
     return booking.id; // Return the booking ID for redirection
   };
@@ -830,7 +834,9 @@ function AppRoutes() {
       travelers: booking.travelers,
       urgent: isUrgent,
       bookedDate: booking.bookedDate,
-      bookingSource: booking.bookingSource as "Customized" | "Generated" || (booking.bookingType === "Customized" ? "Customized" : "Generated"),
+      bookingSource:
+        (booking.bookingSource as "Customized" | "Generated") ||
+        (booking.bookingType === "Customized" ? "Customized" : "Generated"),
       paymentStatus: booking.paymentStatus || "Unpaid",
       tourType: booking.tourType || "Private",
     };
@@ -846,7 +852,7 @@ function AppRoutes() {
 
   const handleCreateBooking = (newBooking: BookingData) => {
     setCreatedBookings((prev) => [newBooking, ...prev]);
-    setBookings(prev => [newBooking, ...prev]);
+    setBookings((prev) => [newBooking, ...prev]);
     navigate("/bookings");
   };
 
@@ -969,17 +975,7 @@ function AppRoutes() {
   return (
     <Routes>
       <Route path="/home" element={<HomePage />} />
-      <Route
-        path="/"
-        element={
-          <Dashboard
-            pendingApprovalsCount={pendingApprovals.length}
-            historyBookings={historyBookings}
-            createdBookings={createdBookings}
-            activeBookingsCount={activeBookingsCount}
-          />
-        }
-      />
+      <Route path="/" element={<Dashboard />} />
       <Route path="/users" element={<Users />} />
       <Route
         path="/bookings"
@@ -988,40 +984,19 @@ function AppRoutes() {
             onMoveToApprovals={moveBookingToApprovals}
             onMoveToRequested={moveBookingToRequested}
             onMoveToHistory={moveBookingToHistory}
-            createdBookings={createdBookings}
             onBookingsCountChange={setActiveBookingsCount}
           />
         }
       />
-      <Route
-        path="/approvals"
-        element={
-          <Approvals
-            pendingBookings={pendingApprovals}
-            setPendingBookings={setPendingApprovals}
-            onApprove={handleBookingApproved}
-          />
-        }
-      />
-      <Route
-        path="/history"
-        element={
-          <History
-            historyBookings={historyBookings}
-            setHistoryBookings={setHistoryBookings}
-          />
-        }
-      />
+      <Route path="/approvals" element={<Approvals />} />
+      <Route path="/history" element={<History />} />
       <Route
         path="/itinerary"
         element={
           <Itinerary
-            onCreateBooking={handleCreateBooking}
             requestedBookingsFromBookings={requestedBookingsFromBookings}
             newStandardItineraries={standardItineraries}
             drafts={drafts}
-            onEditItinerary={handleEditStandardItinerary}
-            onEditRequestedBooking={handleEditRequestedBooking}
             onEditRequestedDraft={handleEditRequestedDraft}
             onEditStandardDraft={handleEditStandardDraft}
             onDeleteDraft={handleDeleteDraft}
@@ -1030,13 +1005,7 @@ function AppRoutes() {
       />
       <Route
         path="/itinerary/create-standard"
-        element={
-          <CreateStandardItinerary
-            onSave={handleCreateStandardItinerary}
-            onSaveDraft={handleSaveDraft}
-            initialData={editingStandardDraft || undefined}
-          />
-        }
+        element={<CreateStandardItinerary />}
       />
       <Route
         path="/itinerary/edit-standard/:id"
@@ -1050,7 +1019,6 @@ function AppRoutes() {
         path="/itinerary/create-requested"
         element={
           <CreateRequestedItinerary
-            onSave={handleSaveRequestedItinerary}
             onSaveDraft={handleSaveDraft}
             initialData={editingRequestedDraft || undefined}
           />
@@ -1100,17 +1068,21 @@ function AppRoutes() {
 export default function App() {
   return (
     <BrowserRouter>
-      <SideProvider>
-        <ProfileProvider>
-          <BookingProvider>
-            <BreadcrumbProvider>
-              <AppLayout>
-                <AppRoutes />
-              </AppLayout>
-            </BreadcrumbProvider>
-          </BookingProvider>
-        </ProfileProvider>
-      </SideProvider>
+      <QueryClientProvider client={new QueryClient()}>
+        <SideProvider>
+          <ProfileProvider>
+            <BookingProvider>
+              <BreadcrumbProvider>
+                <ProtectedRoute>
+                  <AppLayout>
+                    <AppRoutes />
+                  </AppLayout>
+                </ProtectedRoute>
+              </BreadcrumbProvider>
+            </BookingProvider>
+          </ProfileProvider>
+        </SideProvider>
+      </QueryClientProvider>
     </BrowserRouter>
   );
 }

@@ -1,12 +1,12 @@
 import { useState, useMemo } from "react";
-import { 
-  Bell, 
-  CheckCircle, 
-  X, 
-  Calendar, 
-  MessageSquare, 
-  User, 
-  FileText, 
+import {
+  Bell,
+  CheckCircle,
+  X,
+  Calendar,
+  MessageSquare,
+  User,
+  FileText,
   AlertCircle,
   Clock,
   Filter,
@@ -14,45 +14,33 @@ import {
   Trash2,
   Plane,
   Star,
-  Sparkles
+  Sparkles,
+  HelpCircle,
+  CreditCard,
 } from "lucide-react";
 import { ContentCard } from "../../components/ContentCard";
 import { StatCard } from "../../components/StatCard";
 import { ConfirmationModal } from "../../components/ConfirmationModal";
-import { Popover, PopoverContent, PopoverTrigger } from "../../components/ui/popover";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "../../components/ui/popover";
 import { Checkbox } from "../../components/ui/checkbox";
-import { toast } from "sonner@2.0.3";
+import { toast } from "sonner";
 import { FAQAssistant } from "../../components/FAQAssistant";
+import {
+  useNotifications,
+  useMarkNotificationRead,
+} from "../../hooks/useNotifications";
+import { INotification } from "../../types/types";
 
-type NotificationType = 
-  | "booking_confirmed" 
-  | "booking_cancelled" 
-  | "trip_reminder"
-  | "itinerary_ready"
-  | "payment_reminder"
-  | "inquiry_response"
-  | "feedback_request"
-  | "travel_tip"
-  | "booking_update"
-  | "system_alert";
-
-interface Notification {
-  id: string;
-  type: NotificationType;
-  title: string;
-  message: string;
-  timestamp: Date;
-  read: boolean;
-  actionable: boolean;
-  actionUrl?: string;
-  priority: "low" | "medium" | "high" | "urgent";
-  metadata?: {
-    bookingId?: string;
-    tripId?: string;
-    inquiryId?: string;
-    itineraryId?: string;
-  };
-}
+type NotificationType =
+  | "BOOKING"
+  | "PAYMENT"
+  | "INQUIRY"
+  | "FEEDBACK"
+  | "SYSTEM";
 
 export function UserNotifications() {
   const [selectedTab, setSelectedTab] = useState<"all" | "unread">("all");
@@ -61,179 +49,59 @@ export function UserNotifications() {
   const [clearAllModalOpen, setClearAllModalOpen] = useState(false);
   const [markAllReadModalOpen, setMarkAllReadModalOpen] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
-  const [notificationToDelete, setNotificationToDelete] = useState<Notification | null>(null);
+  const [notificationToDelete, setNotificationToDelete] =
+    useState<INotification | null>(null);
 
-  const [notifications, setNotifications] = useState<Notification[]>([
-    {
-      id: "notif-001",
-      type: "booking_confirmed",
-      title: "Booking Confirmed!",
-      message: "Your booking for El Nido, Palawan (BV-2024-001) has been confirmed! Get ready for an amazing adventure!",
-      timestamp: new Date("2025-01-22T14:30:00"),
-      read: false,
-      actionable: true,
-      actionUrl: "/user/bookings",
-      priority: "high",
-      metadata: { bookingId: "BV-2024-001" }
-    },
-    {
-      id: "notif-002",
-      type: "itinerary_ready",
-      title: "Your Itinerary is Ready",
-      message: "Your customized itinerary for Banaue Rice Terraces is now available to view and download",
-      timestamp: new Date("2025-01-22T13:45:00"),
-      read: false,
-      actionable: true,
-      actionUrl: "/user/travels",
-      priority: "high",
-      metadata: { itineraryId: "ITN-2024-012" }
-    },
-    {
-      id: "notif-003",
-      type: "trip_reminder",
-      title: "Trip Starting Soon!",
-      message: "Your trip to El Nido, Palawan starts in 7 days. Don't forget to prepare your essentials!",
-      timestamp: new Date("2025-01-22T11:20:00"),
-      read: true,
-      actionable: true,
-      actionUrl: "/user/bookings",
-      priority: "medium",
-      metadata: { bookingId: "BV-2024-001" }
-    },
-    {
-      id: "notif-004",
-      type: "inquiry_response",
-      title: "Admin Responded to Your Inquiry",
-      message: "Admin has responded to your inquiry about visa requirements. Check the details now.",
-      timestamp: new Date("2025-01-22T10:30:00"),
-      read: true,
-      actionable: true,
-      actionUrl: "/user/inquiries",
-      priority: "high",
-      metadata: { inquiryId: "INQ-2024-008" }
-    },
-    {
-      id: "notif-005",
-      type: "payment_reminder",
-      title: "Payment Reminder",
-      message: "Your payment for Banaue Rice Terraces booking (BV-2024-002) is due in 3 days",
-      timestamp: new Date("2025-01-22T10:05:00"),
-      read: true,
-      actionable: true,
-      actionUrl: "/user/bookings",
-      priority: "urgent",
-      metadata: { bookingId: "BV-2024-002" }
-    },
-    {
-      id: "notif-006",
-      type: "feedback_request",
-      title: "How Was Your Trip?",
-      message: "We'd love to hear about your experience in Siargao! Share your feedback and help other travelers.",
-      timestamp: new Date("2025-01-22T09:30:00"),
-      read: true,
-      actionable: true,
-      actionUrl: "/user/feedback",
-      priority: "low",
-      metadata: { bookingId: "BV-2024-089" }
-    },
-    {
-      id: "notif-007",
-      type: "travel_tip",
-      title: "Travel Tip: Best Time to Visit Palawan",
-      message: "December to May offers perfect weather for island hopping. Plan your next adventure during these months!",
-      timestamp: new Date("2025-01-22T08:45:00"),
-      read: true,
-      actionable: false,
-      priority: "low"
-    },
-    {
-      id: "notif-008",
-      type: "booking_update",
-      title: "Booking Update",
-      message: "Your booking for Coron Island Tour has been updated with new pickup time: 6:00 AM",
-      timestamp: new Date("2025-01-21T16:20:00"),
-      read: true,
-      actionable: true,
-      actionUrl: "/user/bookings",
-      priority: "medium",
-      metadata: { bookingId: "BV-2024-045" }
-    },
-    {
-      id: "notif-009",
-      type: "booking_cancelled",
-      title: "Booking Cancelled",
-      message: "Your booking request for Batanes trip has been cancelled due to weather conditions. Full refund issued.",
-      timestamp: new Date("2025-01-21T15:10:00"),
-      read: true,
-      actionable: true,
-      actionUrl: "/user/history",
-      priority: "high",
-      metadata: { bookingId: "BV-2024-038" }
-    },
-    {
-      id: "notif-010",
-      type: "system_alert",
-      title: "Welcome to BondVoyage!",
-      message: "Start planning your dream Philippine adventure today. Explore our standard itineraries or create custom trips!",
-      timestamp: new Date("2025-01-21T14:00:00"),
-      read: true,
-      actionable: false,
-      priority: "low"
-    },
-    {
-      id: "notif-011",
-      type: "travel_tip",
-      title: "Pack Smart for Your Trip",
-      message: "Don't forget sunscreen, reusable water bottle, and waterproof phone case for beach adventures!",
-      timestamp: new Date("2025-01-21T11:30:00"),
-      read: true,
-      actionable: false,
-      priority: "low"
-    },
-  ]);
+  // Fetch notifications from API
+  const { data: notificationsResponse, isLoading, error } = useNotifications();
+  const notifications = notificationsResponse?.data?.items || [];
 
-  const handleMarkAsRead = (id: string) => {
-    setNotifications(notifications.map(notif => 
-      notif.id === id ? { ...notif, read: true } : notif
-    ));
-    toast.success("Notification marked as read!");
+  const handleMarkAsRead = (notificationId: string) => {
+    const markReadMutation = useMarkNotificationRead(notificationId, {
+      onSuccess: () => {
+        toast.success("Notification marked as read!");
+      },
+      onError: () => {
+        toast.error("Failed to mark notification as read");
+      },
+    });
+    markReadMutation.mutate();
   };
 
   const handleMarkAsUnread = (id: string) => {
-    setNotifications(notifications.map(notif => 
-      notif.id === id ? { ...notif, read: false } : notif
-    ));
-    toast.success("Notification marked as unread!");
+    // TODO: Implement unmark as read API endpoint and mutation
+    toast.info("Mark as unread functionality to be implemented");
   };
 
-  const handleDeleteClick = (notification: Notification) => {
+  const handleDeleteClick = (notification: INotification) => {
     setNotificationToDelete(notification);
     setDeleteConfirmOpen(true);
   };
 
   const handleConfirmDelete = () => {
     if (notificationToDelete) {
-      setNotifications(notifications.filter(notif => notif.id !== notificationToDelete.id));
+      // TODO: Implement delete notification API endpoint and mutation
+      toast.info("Delete functionality to be implemented");
     }
     setDeleteConfirmOpen(false);
     setNotificationToDelete(null);
   };
 
   const handleMarkAllRead = () => {
-    setNotifications(notifications.map(notif => ({ ...notif, read: true })));
+    // TODO: Implement mark all as read API endpoint
+    toast.info("Mark all as read functionality to be implemented");
     setMarkAllReadModalOpen(false);
   };
 
   const handleClearAll = () => {
-    setNotifications(notifications.filter(notif => !notif.read));
+    // TODO: Implement clear all read notifications API endpoint
+    toast.info("Clear all functionality to be implemented");
     setClearAllModalOpen(false);
   };
 
   const toggleTypeFilter = (type: NotificationType) => {
-    setTypeFilters(prev => 
-      prev.includes(type) 
-        ? prev.filter(t => t !== type)
-        : [...prev, type]
+    setTypeFilters((prev) =>
+      prev.includes(type) ? prev.filter((t) => t !== type) : [...prev, type]
     );
   };
 
@@ -243,26 +111,16 @@ export function UserNotifications() {
 
   const getNotificationIcon = (type: NotificationType) => {
     switch (type) {
-      case "booking_confirmed":
-        return CheckCircle;
-      case "booking_cancelled":
-        return X;
-      case "trip_reminder":
-        return Clock;
-      case "itinerary_ready":
-        return FileText;
-      case "payment_reminder":
-        return AlertCircle;
-      case "inquiry_response":
-        return MessageSquare;
-      case "feedback_request":
-        return Star;
-      case "travel_tip":
-        return Sparkles;
-      case "booking_update":
+      case "BOOKING":
         return Calendar;
-      case "system_alert":
-        return Bell;
+      case "PAYMENT":
+        return CreditCard;
+      case "INQUIRY":
+        return HelpCircle;
+      case "FEEDBACK":
+        return Star;
+      case "SYSTEM":
+        return AlertCircle;
       default:
         return Bell;
     }
@@ -270,28 +128,53 @@ export function UserNotifications() {
 
   const getNotificationColor = (type: NotificationType) => {
     switch (type) {
-      case "booking_confirmed":
-        return { bg: "from-[#10B981] to-[#14B8A6]", shadow: "shadow-[#10B981]/20" };
-      case "booking_cancelled":
-        return { bg: "from-[#FF6B6B] to-[#FB7185]", shadow: "shadow-[#FF6B6B]/20" };
-      case "trip_reminder":
-        return { bg: "from-[#0A7AFF] to-[#3B9EFF]", shadow: "shadow-[#0A7AFF]/20" };
-      case "itinerary_ready":
-        return { bg: "from-[#A78BFA] to-[#8B5CF6]", shadow: "shadow-[#A78BFA]/20" };
-      case "payment_reminder":
-        return { bg: "from-[#FFB84D] to-[#FB7185]", shadow: "shadow-[#FFB84D]/20" };
-      case "inquiry_response":
-        return { bg: "from-[#0A7AFF] to-[#14B8A6]", shadow: "shadow-[#0A7AFF]/20" };
-      case "feedback_request":
-        return { bg: "from-[#FFB84D] to-[#FB7185]", shadow: "shadow-[#FFB84D]/20" };
-      case "travel_tip":
-        return { bg: "from-[#14B8A6] to-[#10B981]", shadow: "shadow-[#14B8A6]/20" };
-      case "booking_update":
-        return { bg: "from-[#0A7AFF] to-[#3B9EFF]", shadow: "shadow-[#0A7AFF]/20" };
-      case "system_alert":
-        return { bg: "from-[#64748B] to-[#475569]", shadow: "shadow-[#64748B]/20" };
+      case "BOOKING":
+        return {
+          bg: "from-[#0A7AFF] to-[#3B9EFF]",
+          shadow: "shadow-[#0A7AFF]/20",
+        };
+      case "PAYMENT":
+        return {
+          bg: "from-[#10B981] to-[#14B8A6]",
+          shadow: "shadow-[#10B981]/20",
+        };
+      case "INQUIRY":
+        return {
+          bg: "from-[#0A7AFF] to-[#14B8A6]",
+          shadow: "shadow-[#0A7AFF]/20",
+        };
+      case "FEEDBACK":
+        return {
+          bg: "from-[#FFB84D] to-[#FB7185]",
+          shadow: "shadow-[#FFB84D]/20",
+        };
+      case "SYSTEM":
+        return {
+          bg: "from-[#64748B] to-[#475569]",
+          shadow: "shadow-[#64748B]/20",
+        };
       default:
-        return { bg: "from-[#0A7AFF] to-[#14B8A6]", shadow: "shadow-[#0A7AFF]/20" };
+        return {
+          bg: "from-[#0A7AFF] to-[#14B8A6]",
+          shadow: "shadow-[#0A7AFF]/20",
+        };
+    }
+  };
+
+  const getPriorityFromType = (type: NotificationType): string => {
+    switch (type) {
+      case "BOOKING":
+        return "high";
+      case "PAYMENT":
+        return "urgent";
+      case "INQUIRY":
+        return "medium";
+      case "FEEDBACK":
+        return "low";
+      case "SYSTEM":
+        return "low";
+      default:
+        return "medium";
     }
   };
 
@@ -310,7 +193,8 @@ export function UserNotifications() {
     }
   };
 
-  const formatTimestamp = (date: Date) => {
+  const formatTimestamp = (dateString: string) => {
+    const date = new Date(dateString);
     const now = new Date();
     const diffMs = now.getTime() - date.getTime();
     const diffMins = Math.floor(diffMs / 60000);
@@ -328,44 +212,75 @@ export function UserNotifications() {
   // Filter notifications
   const filteredNotifications = useMemo(() => {
     return notifications
-      .filter(notif => {
+      .filter((notif) => {
         // Tab filter
-        if (selectedTab === "unread" && notif.read) return false;
-        
+        if (selectedTab === "unread" && notif.isRead) return false;
+
         // Type filter
-        if (typeFilters.length > 0 && !typeFilters.includes(notif.type)) return false;
-        
+        if (typeFilters.length > 0 && !typeFilters.includes(notif.type))
+          return false;
+
         return true;
       })
       .sort((a, b) => {
         // Sort unread to top
-        if (!a.read && b.read) return -1;
-        if (a.read && !b.read) return 1;
-        
+        if (!a.isRead && b.isRead) return -1;
+        if (a.isRead && !b.isRead) return 1;
+
         // Then by timestamp (newest first)
-        return b.timestamp.getTime() - a.timestamp.getTime();
+        return (
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        );
       });
   }, [notifications, selectedTab, typeFilters]);
 
-  const unreadCount = notifications.filter(n => !n.read).length;
-  const actionableCount = notifications.filter(n => n.actionable && !n.read).length;
-  const todayCount = notifications.filter(n => {
+  const unreadCount = notifications.filter((n) => !n.isRead).length;
+  const todayCount = notifications.filter((n) => {
     const today = new Date();
-    return n.timestamp.toDateString() === today.toDateString();
+    const notifDate = new Date(n.createdAt);
+    return notifDate.toDateString() === today.toDateString();
   }).length;
 
-  const notificationTypes: { type: NotificationType; label: string; icon: any }[] = [
-    { type: "booking_confirmed", label: "Booking Confirmed", icon: CheckCircle },
-    { type: "booking_cancelled", label: "Booking Cancelled", icon: X },
-    { type: "trip_reminder", label: "Trip Reminders", icon: Clock },
-    { type: "itinerary_ready", label: "Itinerary Ready", icon: FileText },
-    { type: "payment_reminder", label: "Payment Reminders", icon: AlertCircle },
-    { type: "inquiry_response", label: "Inquiry Responses", icon: MessageSquare },
-    { type: "feedback_request", label: "Feedback Requests", icon: Star },
-    { type: "travel_tip", label: "Travel Tips", icon: Sparkles },
-    { type: "booking_update", label: "Booking Updates", icon: Calendar },
-    { type: "system_alert", label: "System Alerts", icon: Bell },
+  const notificationTypes: {
+    type: NotificationType;
+    label: string;
+    icon: any;
+  }[] = [
+    { type: "BOOKING", label: "Booking", icon: Calendar },
+    { type: "PAYMENT", label: "Payment", icon: CreditCard },
+    { type: "INQUIRY", label: "Inquiry", icon: HelpCircle },
+    { type: "FEEDBACK", label: "Feedback", icon: Star },
+    { type: "SYSTEM", label: "System", icon: AlertCircle },
   ];
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[rgba(10,122,255,0.1)] to-[rgba(20,184,166,0.1)] flex items-center justify-center mx-auto mb-4">
+            <Bell className="w-8 h-8 text-[#0A7AFF] animate-pulse" />
+          </div>
+          <p className="text-sm text-[#64748B]">Loading notifications...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[rgba(255,107,107,0.1)] to-[rgba(239,68,68,0.1)] flex items-center justify-center mx-auto mb-4">
+            <AlertCircle className="w-8 h-8 text-[#FF6B6B]" />
+          </div>
+          <p className="text-sm text-[#FF6B6B] font-medium mb-2">
+            Failed to load notifications
+          </p>
+          <p className="text-xs text-[#64748B]">Please try again later</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -395,7 +310,9 @@ export function UserNotifications() {
       </div>
 
       <ContentCard
-        title={`${selectedTab === "all" ? "All" : "Unread"} Notifications (${filteredNotifications.length})`}
+        title={`${selectedTab === "all" ? "All" : "Unread"} Notifications (${
+          filteredNotifications.length
+        })`}
         action={
           <div className="flex items-center gap-3">
             <button
@@ -419,7 +336,7 @@ export function UserNotifications() {
         {/* Tabs and Filter */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-1 border-b-2 border-[#E5E7EB]">
-            <button 
+            <button
               onClick={() => setSelectedTab("all")}
               className={`px-5 h-11 text-sm transition-colors ${
                 selectedTab === "all"
@@ -429,7 +346,7 @@ export function UserNotifications() {
             >
               All
             </button>
-            <button 
+            <button
               onClick={() => setSelectedTab("unread")}
               className={`px-5 h-11 text-sm transition-colors ${
                 selectedTab === "unread"
@@ -457,7 +374,9 @@ export function UserNotifications() {
             <PopoverContent className="w-80" align="end">
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <h4 className="font-semibold text-[#1A2B4F]">Filter by Type</h4>
+                  <h4 className="font-semibold text-[#1A2B4F]">
+                    Filter by Type
+                  </h4>
                   {typeFilters.length > 0 && (
                     <button
                       onClick={clearFilters}
@@ -478,9 +397,11 @@ export function UserNotifications() {
                         onCheckedChange={() => toggleTypeFilter(type)}
                       />
                       <Icon className="w-4 h-4 text-[#64748B]" />
-                      <span className="text-sm text-[#334155] flex-1">{label}</span>
+                      <span className="text-sm text-[#334155] flex-1">
+                        {label}
+                      </span>
                       <span className="text-xs text-[#94A3B8]">
-                        {notifications.filter(n => n.type === type).length}
+                        {notifications.filter((n) => n.type === type).length}
                       </span>
                     </label>
                   ))}
@@ -497,10 +418,12 @@ export function UserNotifications() {
               <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[rgba(10,122,255,0.1)] to-[rgba(20,184,166,0.1)] flex items-center justify-center mx-auto mb-4">
                 <Bell className="w-8 h-8 text-[#0A7AFF]" />
               </div>
-              <h3 className="font-semibold text-[#1A2B4F] mb-2">No notifications</h3>
+              <h3 className="font-semibold text-[#1A2B4F] mb-2">
+                No notifications
+              </h3>
               <p className="text-sm text-[#64748B]">
-                {selectedTab === "unread" 
-                  ? "You're all caught up!" 
+                {selectedTab === "unread"
+                  ? "You're all caught up!"
                   : "New notifications will appear here"}
               </p>
             </div>
@@ -508,29 +431,38 @@ export function UserNotifications() {
             filteredNotifications.map((notification) => {
               const Icon = getNotificationIcon(notification.type);
               const colors = getNotificationColor(notification.type);
-              
+              const priority = getPriorityFromType(notification.type);
+
               return (
                 <div
                   key={notification.id}
                   className={`p-5 rounded-2xl border-2 transition-all duration-200 cursor-pointer ${
-                    !notification.read
+                    !notification.isRead
                       ? "border-[#0A7AFF] bg-[rgba(10,122,255,0.02)] hover:border-[#0A7AFF] hover:shadow-[0_4px_12px_rgba(10,122,255,0.15)]"
                       : "border-[#E5E7EB] bg-white hover:border-[#0A7AFF] hover:shadow-[0_4px_12px_rgba(10,122,255,0.1)]"
                   }`}
                 >
                   <div className="flex items-start gap-4">
-                    <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${colors.bg} flex items-center justify-center shadow-lg ${colors.shadow} flex-shrink-0`}>
+                    <div
+                      className={`w-12 h-12 rounded-xl bg-gradient-to-br ${colors.bg} flex items-center justify-center shadow-lg ${colors.shadow} flex-shrink-0`}
+                    >
                       <Icon className="w-6 h-6 text-white" />
                     </div>
-                    
+
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between gap-3 mb-2">
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1">
-                            <h3 className={`font-semibold ${!notification.read ? "text-[#1A2B4F]" : "text-[#334155]"}`}>
+                            <h3
+                              className={`font-semibold ${
+                                !notification.isRead
+                                  ? "text-[#1A2B4F]"
+                                  : "text-[#334155]"
+                              }`}
+                            >
                               {notification.title}
                             </h3>
-                            {!notification.read && (
+                            {!notification.isRead && (
                               <span className="w-2 h-2 rounded-full bg-[#0A7AFF] flex-shrink-0" />
                             )}
                           </div>
@@ -540,30 +472,32 @@ export function UserNotifications() {
                           <div className="flex items-center gap-3 flex-wrap">
                             <span className="text-xs text-[#94A3B8] flex items-center gap-1.5">
                               <Clock className="w-3.5 h-3.5" />
-                              {formatTimestamp(notification.timestamp)}
+                              {formatTimestamp(notification.createdAt)}
                             </span>
-                            <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${getPriorityColor(notification.priority)}`}>
-                              {notification.priority.charAt(0).toUpperCase() + notification.priority.slice(1)}
+                            <span
+                              className={`px-2.5 py-1 rounded-full text-xs font-medium ${getPriorityColor(
+                                priority
+                              )}`}
+                            >
+                              {priority.charAt(0).toUpperCase() +
+                                priority.slice(1)}
                             </span>
-                            {notification.actionable && (
-                              <span className="px-2.5 py-1 rounded-full text-xs font-medium bg-[rgba(10,122,255,0.1)] text-[#0A7AFF] border border-[rgba(10,122,255,0.2)]">
-                                Actionable
-                              </span>
-                            )}
+                            <span className="px-2.5 py-1 rounded-full text-xs font-medium bg-[rgba(10,122,255,0.1)] text-[#0A7AFF] border border-[rgba(10,122,255,0.2)]">
+                              {notification.type}
+                            </span>
                           </div>
                         </div>
                       </div>
-                      
+
                       {/* Actions */}
                       <div className="flex items-center gap-2 mt-3">
-                        {!notification.read ? (
+                        {!notification.isRead ? (
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
                               handleMarkAsRead(notification.id);
                             }}
-                            className="h-8 px-3 rounded-lg text-white text-xs font-medium flex items-center gap-1.5 hover:opacity-90 transition-all"
-                            style={{ background: `linear-gradient(135deg, var(--gradient-from), var(--gradient-to))` }}
+                            className="h-8 px-3 rounded-lg bg-gradient-to-br from-[#0A7AFF] to-[#14B8A6] text-white text-xs font-medium flex items-center gap-1.5 hover:opacity-90 transition-all"
                           >
                             <CheckCircle className="w-3.5 h-3.5" />
                             Mark as Read
@@ -613,32 +547,45 @@ export function UserNotifications() {
         contentBorder="border-[rgba(10,122,255,0.2)]"
         content={
           <p className="text-sm text-[#334155] leading-relaxed">
-            Are you sure you want to mark all {unreadCount} unread notification{unreadCount !== 1 ? 's' : ''} as read? This action will update all notifications at once.
+            Are you sure you want to mark all{" "}
+            <span className="font-semibold text-[#0A7AFF]">
+              {unreadCount} unread notifications
+            </span>{" "}
+            as read?
           </p>
         }
-        confirmText="Mark All as Read"
         onConfirm={handleMarkAllRead}
+        onCancel={() => setMarkAllReadModalOpen(false)}
+        confirmText="Mark All Read"
+        cancelText="Cancel"
+        confirmVariant="default"
       />
 
       {/* Clear All Modal */}
       <ConfirmationModal
         open={clearAllModalOpen}
         onOpenChange={setClearAllModalOpen}
-        title="Clear All Read Notifications"
-        description="This will permanently remove all read notifications."
+        title="Clear Read Notifications"
+        description="This will permanently delete all read notifications."
         icon={<Trash2 className="w-5 h-5 text-white" />}
-        iconGradient="bg-gradient-to-br from-[#FF6B6B] to-[#FB7185]"
+        iconGradient="bg-gradient-to-br from-[#FF6B6B] to-[#EF4444]"
         iconShadow="shadow-[#FF6B6B]/20"
-        contentGradient="bg-gradient-to-br from-[rgba(255,107,107,0.08)] to-[rgba(251,113,133,0.12)]"
+        contentGradient="bg-gradient-to-br from-[rgba(255,107,107,0.08)] to-[rgba(239,68,68,0.12)]"
         contentBorder="border-[rgba(255,107,107,0.2)]"
         content={
           <p className="text-sm text-[#334155] leading-relaxed">
-            Are you sure you want to clear all read notifications? This action cannot be undone and will permanently delete {notifications.filter(n => n.read).length} read notification{notifications.filter(n => n.read).length !== 1 ? 's' : ''}.
+            Are you sure you want to delete all{" "}
+            <span className="font-semibold text-[#FF6B6B]">
+              {notifications.filter((n) => n.isRead).length} read notifications
+            </span>
+            ? This action cannot be undone.
           </p>
         }
-        confirmText="Clear All Read"
-        confirmVariant="destructive"
         onConfirm={handleClearAll}
+        onCancel={() => setClearAllModalOpen(false)}
+        confirmText="Clear All"
+        cancelText="Cancel"
+        confirmVariant="destructive"
       />
 
       {/* Delete Notification Modal */}
@@ -646,21 +593,40 @@ export function UserNotifications() {
         open={deleteConfirmOpen}
         onOpenChange={setDeleteConfirmOpen}
         title="Delete Notification"
-        description="This notification will be permanently removed."
+        description="This will permanently delete this notification."
         icon={<Trash2 className="w-5 h-5 text-white" />}
-        iconGradient="bg-gradient-to-br from-[#FF6B6B] to-[#FB7185]"
+        iconGradient="bg-gradient-to-br from-[#FF6B6B] to-[#EF4444]"
         iconShadow="shadow-[#FF6B6B]/20"
-        contentGradient="bg-gradient-to-br from-[rgba(255,107,107,0.08)] to-[rgba(251,113,133,0.12)]"
+        contentGradient="bg-gradient-to-br from-[rgba(255,107,107,0.08)] to-[rgba(239,68,68,0.12)]"
         contentBorder="border-[rgba(255,107,107,0.2)]"
         content={
-          <p className="text-sm text-[#334155] leading-relaxed">
-            Are you sure you want to delete "{notificationToDelete?.title}"? This action cannot be undone.
-          </p>
+          notificationToDelete ? (
+            <div className="space-y-3">
+              <p className="text-sm text-[#334155] leading-relaxed">
+                Are you sure you want to delete this notification? This action
+                cannot be undone.
+              </p>
+              <div className="p-4 rounded-xl bg-white border border-[rgba(255,107,107,0.2)]">
+                <p className="text-sm font-semibold text-[#1A2B4F] mb-1">
+                  {notificationToDelete.title}
+                </p>
+                <p className="text-xs text-[#64748B]">
+                  {notificationToDelete.message}
+                </p>
+              </div>
+            </div>
+          ) : null
         }
-        confirmText="Delete Notification"
-        confirmVariant="destructive"
         onConfirm={handleConfirmDelete}
+        onCancel={() => {
+          setDeleteConfirmOpen(false);
+          setNotificationToDelete(null);
+        }}
+        confirmText="Delete Notification"
+        cancelText="Cancel"
+        confirmVariant="destructive"
       />
+
       <FAQAssistant />
     </div>
   );

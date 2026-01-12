@@ -2,13 +2,18 @@ import { Star, MessageCircle, CheckCircle, Filter, X } from "lucide-react";
 import { useState, useMemo, useEffect } from "react";
 import { StatCard } from "../components/StatCard";
 import { ContentCard } from "../components/ContentCard";
-import { Popover, PopoverContent, PopoverTrigger } from "../components/ui/popover";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "../components/ui/popover";
 import { Checkbox } from "../components/ui/checkbox";
 import { ConfirmationModal } from "../components/ConfirmationModal";
 import { Textarea } from "../components/ui/textarea";
 import { Label } from "../components/ui/label";
-import { toast } from "sonner@2.0.3";
+import { toast } from "sonner";
 import { useProfile } from "../components/ProfileContext";
+import { useFeedbackList } from "../hooks/useFeedbackList";
 
 interface FeedbackItem {
   id: number;
@@ -30,80 +35,67 @@ export function Feedback() {
   const [selectedTab, setSelectedTab] = useState<"all" | "unread">("all");
   const [starFilters, setStarFilters] = useState<number[]>([]);
   const [filterOpen, setFilterOpen] = useState(false);
-  
+
   // Reply modal state
   const [replyModalOpen, setReplyModalOpen] = useState(false);
-  const [selectedFeedbackForReply, setSelectedFeedbackForReply] = useState<FeedbackItem | null>(null);
+  const [selectedFeedbackForReply, setSelectedFeedbackForReply] =
+    useState<FeedbackItem | null>(null);
   const [replyText, setReplyText] = useState("");
-  
+
+  const { data } = useFeedbackList();
+
   // View reply modal state
   const [viewReplyModalOpen, setViewReplyModalOpen] = useState(false);
-  const [selectedFeedbackForView, setSelectedFeedbackForView] = useState<FeedbackItem | null>(null);
-  
-  const [feedbackItems, setFeedbackItems] = useState<FeedbackItem[]>([
-    {
-      id: 1,
-      customer: "Maria Santos",
-      bookingId: "BV-2024-001",
-      trip: "Boracay 5-Day Beach Escape",
-      rating: 5,
-      text: "Amazing experience! The itinerary was perfect and everything went smoothly. Highly recommend!",
-      date: "March 25, 2024",
-      unread: true,
-      read: false,
-    },
-    {
-      id: 2,
-      customer: "Juan dela Cruz",
-      bookingId: "BV-2024-002",
-      trip: "Palawan 7-Day Island Hopping",
-      rating: 4,
-      text: "Great trip overall, but hotel check-in was delayed. Otherwise, everything was wonderful!",
-      date: "March 20, 2024",
-      unread: false,
-      responded: true,
-      read: true,
-      reply: "Thank you for your feedback! We apologize for the delay in check-in. We've addressed this issue with our hotel partners to ensure better service in the future. We're glad you enjoyed the rest of your trip!",
-      replyDate: "March 21, 2024",
-    },
-    {
-      id: 3,
-      customer: "Ana Reyes",
-      bookingId: "BV-2024-003",
-      trip: "Baguio 4-Day Summer Capital",
-      rating: 5,
-      text: "Absolutely fantastic! Baguio was beautiful and the guide was amazing. Thank you!",
-      date: "March 18, 2024",
-      unread: false,
-      responded: true,
-      read: true,
-      reply: "We're thrilled to hear you had a fantastic time in Baguio! Thank you for your kind words about our guide. We look forward to serving you again on your next adventure!",
-      replyDate: "March 19, 2024",
-    },
-    {
-      id: 4,
-      customer: "Carlos Mendoza",
-      bookingId: "BV-2024-004",
-      trip: "Siargao 6-Day Surfing Adventure",
-      rating: 3,
-      text: "Good trip but some activities were rushed. Would prefer more time at each location.",
-      date: "March 15, 2024",
-      unread: true,
-      read: false,
-    },
-  ]);
+  const [selectedFeedbackForView, setSelectedFeedbackForView] =
+    useState<FeedbackItem | null>(null);
+
+  const [feedbackItems, setFeedbackItems] = useState<FeedbackItem[]>([]);
+
+  useEffect(() => {
+    if (data?.data) {
+      const transformedData: FeedbackItem[] = data.data.map((item: any) => ({
+        id: item.id,
+        customer: `${item.user.firstName} ${item.user.lastName}`,
+        bookingId: item.id.slice(0, 8).toUpperCase(),
+        trip: "Trip Details", // Placeholder since API doesn't provide trip name
+        rating: item.rating,
+        text: item.comment,
+        date: new Date(item.createdAt).toLocaleDateString("en-US", {
+          month: "long",
+          day: "numeric",
+          year: "numeric",
+        }),
+        unread: !item.response,
+        responded: !!item.response,
+        read: !!item.response,
+        reply: item.response || undefined,
+        replyDate: item.respondedAt
+          ? new Date(item.respondedAt).toLocaleDateString("en-US", {
+              month: "long",
+              day: "numeric",
+              year: "numeric",
+            })
+          : undefined,
+      }));
+      setFeedbackItems(transformedData);
+    }
+  }, [data]);
 
   const handleMarkAsRead = (id: number) => {
-    setFeedbackItems(feedbackItems.map(item => 
-      item.id === id ? { ...item, unread: false, read: true } : item
-    ));
+    setFeedbackItems(
+      feedbackItems.map((item) =>
+        item.id === id ? { ...item, unread: false, read: true } : item
+      )
+    );
     toast.success("Feedback marked as read!");
   };
 
   const handleMarkAsUnread = (id: number) => {
-    setFeedbackItems(feedbackItems.map(item => 
-      item.id === id ? { ...item, unread: true, read: false } : item
-    ));
+    setFeedbackItems(
+      feedbackItems.map((item) =>
+        item.id === id ? { ...item, unread: true, read: false } : item
+      )
+    );
     toast.success("Feedback marked as unread!");
   };
 
@@ -119,24 +111,26 @@ export function Feedback() {
       return;
     }
 
-    const today = new Date().toLocaleDateString('en-US', { 
-      month: 'long', 
-      day: 'numeric', 
-      year: 'numeric' 
+    const today = new Date().toLocaleDateString("en-US", {
+      month: "long",
+      day: "numeric",
+      year: "numeric",
     });
 
-    setFeedbackItems(feedbackItems.map(item => 
-      item.id === selectedFeedbackForReply.id 
-        ? { 
-            ...item, 
-            responded: true, 
-            read: true, 
-            unread: false,
-            reply: replyText,
-            replyDate: today
-          } 
-        : item
-    ));
+    setFeedbackItems(
+      feedbackItems.map((item) =>
+        item.id === selectedFeedbackForReply.id
+          ? {
+              ...item,
+              responded: true,
+              read: true,
+              unread: false,
+              reply: replyText,
+              replyDate: today,
+            }
+          : item
+      )
+    );
 
     setReplyModalOpen(false);
     setSelectedFeedbackForReply(null);
@@ -150,10 +144,8 @@ export function Feedback() {
   };
 
   const toggleStarFilter = (star: number) => {
-    setStarFilters(prev => 
-      prev.includes(star) 
-        ? prev.filter(s => s !== star)
-        : [...prev, star]
+    setStarFilters((prev) =>
+      prev.includes(star) ? prev.filter((s) => s !== star) : [...prev, star]
     );
   };
 
@@ -167,7 +159,11 @@ export function Feedback() {
         {[1, 2, 3, 4, 5].map((star) => (
           <Star
             key={star}
-            className={`w-4 h-4 ${star <= rating ? 'fill-[#FFB84D] text-[#FFB84D]' : 'text-[#E5E7EB]'}`}
+            className={`w-4 h-4 ${
+              star <= rating
+                ? "fill-[#FFB84D] text-[#FFB84D]"
+                : "text-[#E5E7EB]"
+            }`}
           />
         ))}
       </div>
@@ -177,13 +173,14 @@ export function Feedback() {
   // Filter feedback based on selected tab and star filters
   const filteredFeedback = useMemo(() => {
     return feedbackItems
-      .filter(item => {
+      .filter((item) => {
         // Tab filter
         if (selectedTab === "unread" && !item.unread) return false;
-        
+
         // Star filter
-        if (starFilters.length > 0 && !starFilters.includes(item.rating)) return false;
-        
+        if (starFilters.length > 0 && !starFilters.includes(item.rating))
+          return false;
+
         return true;
       })
       .sort((a, b) => {
@@ -199,20 +196,25 @@ export function Feedback() {
   // Calculate stats based on ALL feedback (not just filtered)
   const stats = useMemo(() => {
     const totalFeedback = feedbackItems.length;
-    const respondedCount = feedbackItems.filter(item => item.responded).length;
-    const avgRatingNum = feedbackItems.length > 0 
-      ? feedbackItems.reduce((sum, item) => sum + item.rating, 0) / feedbackItems.length
-      : 0;
+    const respondedCount = feedbackItems.filter(
+      (item) => item.responded
+    ).length;
+    const avgRatingNum =
+      feedbackItems.length > 0
+        ? feedbackItems.reduce((sum, item) => sum + item.rating, 0) /
+          feedbackItems.length
+        : 0;
     const avgRating = avgRatingNum.toFixed(1);
-    const respondedPercentage = totalFeedback > 0 
-      ? Math.round((respondedCount / totalFeedback) * 100)
-      : 0;
+    const respondedPercentage =
+      totalFeedback > 0
+        ? Math.round((respondedCount / totalFeedback) * 100)
+        : 0;
 
     return {
       totalFeedback,
       avgRating,
       avgRatingNum,
-      respondedPercentage
+      respondedPercentage,
     };
   }, [feedbackItems]);
 
@@ -223,7 +225,7 @@ export function Feedback() {
     }
   }, [stats.avgRatingNum, setCustomerRatingFromFeedback]);
 
-  const unreadCount = feedbackItems.filter(item => item.unread).length;
+  const unreadCount = feedbackItems.filter((item) => item.unread).length;
 
   return (
     <div>
@@ -252,13 +254,15 @@ export function Feedback() {
         />
       </div>
 
-      <ContentCard 
-        title={`${selectedTab === "all" ? "All" : "Unread"} Feedback (${filteredFeedback.length})`}
+      <ContentCard
+        title={`${selectedTab === "all" ? "All" : "Unread"} Feedback (${
+          filteredFeedback.length
+        })`}
       >
         {/* Filter Tabs and Filter Button */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-1 border-b-2 border-[#E5E7EB]">
-            <button 
+            <button
               onClick={() => setSelectedTab("all")}
               className={`px-5 h-11 text-sm transition-colors ${
                 selectedTab === "all"
@@ -268,7 +272,7 @@ export function Feedback() {
             >
               All
             </button>
-            <button 
+            <button
               onClick={() => setSelectedTab("unread")}
               className={`px-5 h-11 text-sm transition-colors ${
                 selectedTab === "unread"
@@ -296,7 +300,9 @@ export function Feedback() {
             <PopoverContent className="w-64 p-4" align="end">
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <h4 className="text-sm font-semibold text-[#1A2B4F]">Filter by Rating</h4>
+                  <h4 className="text-sm font-semibold text-[#1A2B4F]">
+                    Filter by Rating
+                  </h4>
                   {starFilters.length > 0 && (
                     <button
                       onClick={clearFilters}
@@ -319,7 +325,9 @@ export function Feedback() {
                         className="flex items-center gap-2 text-sm font-medium cursor-pointer"
                       >
                         {renderStars(star)}
-                        <span className="text-[#64748B]">({star} {star === 1 ? 'star' : 'stars'})</span>
+                        <span className="text-[#64748B]">
+                          ({star} {star === 1 ? "star" : "stars"})
+                        </span>
                       </label>
                     </div>
                   ))}
@@ -333,7 +341,7 @@ export function Feedback() {
         {starFilters.length > 0 && (
           <div className="flex items-center gap-2 mb-4 flex-wrap">
             <span className="text-sm text-[#64748B]">Active filters:</span>
-            {starFilters.map(star => (
+            {starFilters.map((star) => (
               <button
                 key={star}
                 onClick={() => toggleStarFilter(star)}
@@ -349,7 +357,9 @@ export function Feedback() {
         {/* Feedback List */}
         {filteredFeedback.length === 0 ? (
           <div className="text-center py-12">
-            <p className="text-[#64748B]">No feedback found matching your filters.</p>
+            <p className="text-[#64748B]">
+              No feedback found matching your filters.
+            </p>
           </div>
         ) : (
           <div className="space-y-4">
@@ -358,9 +368,10 @@ export function Feedback() {
                 key={item.id}
                 className={`
                   p-6 rounded-2xl border-2 transition-all duration-200 cursor-pointer
-                  ${item.unread 
-                    ? 'border-[#0A7AFF] bg-[rgba(10,122,255,0.02)] hover:shadow-[0_4px_12px_rgba(10,122,255,0.1)]' 
-                    : 'border-[#E5E7EB] hover:border-[#0A7AFF] hover:shadow-[0_4px_12px_rgba(10,122,255,0.1)]'
+                  ${
+                    item.unread
+                      ? "border-[#0A7AFF] bg-[rgba(10,122,255,0.02)] hover:shadow-[0_4px_12px_rgba(10,122,255,0.1)]"
+                      : "border-[#E5E7EB] hover:border-[#0A7AFF] hover:shadow-[0_4px_12px_rgba(10,122,255,0.1)]"
                   }
                 `}
               >
@@ -369,14 +380,21 @@ export function Feedback() {
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#0A7AFF] to-[#14B8A6] flex items-center justify-center">
                       <span className="text-white text-sm font-medium">
-                        {item.customer.split(' ').map(n => n[0]).join('')}
+                        {item.customer
+                          .split(" ")
+                          .map((n) => n[0])
+                          .join("")}
                       </span>
                     </div>
                     <div>
                       <div className="flex items-center gap-2 mb-1">
-                        <span className="text-sm text-[#1A2B4F] font-semibold">{item.customer}</span>
+                        <span className="text-sm text-[#1A2B4F] font-semibold">
+                          {item.customer}
+                        </span>
                         <span className="text-sm text-[#64748B]">•</span>
-                        <span className="text-sm text-[#64748B]">Booking #{item.bookingId}</span>
+                        <span className="text-sm text-[#64748B]">
+                          Booking #{item.bookingId}
+                        </span>
                         {renderStars(item.rating)}
                       </div>
                       <p className="text-sm text-[#64748B]">{item.trip}</p>
@@ -419,7 +437,7 @@ export function Feedback() {
                   </div>
                   <div className="flex items-center gap-2">
                     {item.responded ? (
-                      <button 
+                      <button
                         onClick={() => handleViewReply(item)}
                         className="h-9 px-4 rounded-lg border border-[#E5E7EB] hover:border-[#0A7AFF] hover:bg-[#F8FAFB] text-sm text-[#334155] font-medium transition-all"
                       >
@@ -427,22 +445,24 @@ export function Feedback() {
                       </button>
                     ) : (
                       <>
-                        <button 
+                        <button
                           onClick={() => handleOpenReplyModal(item)}
                           className="h-9 px-4 rounded-lg text-white text-sm font-medium shadow-[0_2px_8px_rgba(10,122,255,0.25)] hover:-translate-y-0.5 transition-all"
-                          style={{ background: `linear-gradient(135deg, var(--gradient-from), var(--gradient-to))` }}
+                          style={{
+                            background: `linear-gradient(135deg, var(--gradient-from), var(--gradient-to))`,
+                          }}
                         >
                           Reply
                         </button>
                         {item.read ? (
-                          <button 
+                          <button
                             onClick={() => handleMarkAsUnread(item.id)}
                             className="h-9 px-4 rounded-lg border border-[#E5E7EB] hover:border-[#0A7AFF] hover:bg-[#F8FAFB] text-sm text-[#334155] font-medium transition-all"
                           >
                             Mark as Unread
                           </button>
                         ) : (
-                          <button 
+                          <button
                             onClick={() => handleMarkAsRead(item.id)}
                             className="h-9 px-4 rounded-lg border border-[#E5E7EB] hover:border-[#0A7AFF] hover:bg-[#F8FAFB] text-sm text-[#334155] font-medium transition-all"
                           >
@@ -476,11 +496,17 @@ export function Feedback() {
               {/* Original Feedback */}
               <div className="bg-[rgba(10,122,255,0.08)] border border-[rgba(10,122,255,0.2)] rounded-xl p-4">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-semibold text-[#1A2B4F]">{selectedFeedbackForReply.customer}</span>
+                  <span className="text-sm font-semibold text-[#1A2B4F]">
+                    {selectedFeedbackForReply.customer}
+                  </span>
                   {renderStars(selectedFeedbackForReply.rating)}
                 </div>
-                <p className="text-sm text-[#64748B] mb-1">{selectedFeedbackForReply.trip}</p>
-                <p className="text-sm text-[#334155] italic">"{selectedFeedbackForReply.text}"</p>
+                <p className="text-sm text-[#64748B] mb-1">
+                  {selectedFeedbackForReply.trip}
+                </p>
+                <p className="text-sm text-[#334155] italic">
+                  "{selectedFeedbackForReply.text}"
+                </p>
               </div>
 
               {/* Reply Input */}
@@ -529,30 +555,46 @@ export function Feedback() {
             <div className="space-y-4">
               {/* Feedback */}
               <div>
-                <h4 className="text-sm font-semibold text-[#1A2B4F] mb-2">Feedback</h4>
+                <h4 className="text-sm font-semibold text-[#1A2B4F] mb-2">
+                  Feedback
+                </h4>
                 <div className="bg-[rgba(10,122,255,0.08)] border border-[rgba(10,122,255,0.2)] rounded-xl p-4">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-semibold text-[#1A2B4F]">{selectedFeedbackForView.customer}</span>
+                    <span className="text-sm font-semibold text-[#1A2B4F]">
+                      {selectedFeedbackForView.customer}
+                    </span>
                     {renderStars(selectedFeedbackForView.rating)}
                   </div>
-                  <p className="text-sm text-[#64748B] mb-1">{selectedFeedbackForView.trip}</p>
-                  <p className="text-sm text-[#334155] italic">"{selectedFeedbackForView.text}"</p>
-                  <p className="text-xs text-[#64748B] mt-2">{selectedFeedbackForView.date}</p>
+                  <p className="text-sm text-[#64748B] mb-1">
+                    {selectedFeedbackForView.trip}
+                  </p>
+                  <p className="text-sm text-[#334155] italic">
+                    "{selectedFeedbackForView.text}"
+                  </p>
+                  <p className="text-xs text-[#64748B] mt-2">
+                    {selectedFeedbackForView.date}
+                  </p>
                 </div>
               </div>
 
               {/* Your Reply */}
               <div>
-                <h4 className="text-sm font-semibold text-[#1A2B4F] mb-2">Your Reply</h4>
+                <h4 className="text-sm font-semibold text-[#1A2B4F] mb-2">
+                  Your Reply
+                </h4>
                 <div className="bg-[rgba(16,185,129,0.08)] border border-[rgba(16,185,129,0.2)] rounded-xl p-4">
                   <div className="flex items-center gap-2 mb-2">
                     <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-[rgba(16,185,129,0.1)] text-[#10B981] text-xs font-medium">
                       <CheckCircle className="w-3 h-3" />
                       Responded
                     </span>
-                    <span className="text-xs text-[#64748B]">{selectedFeedbackForView.replyDate}</span>
+                    <span className="text-xs text-[#64748B]">
+                      {selectedFeedbackForView.replyDate}
+                    </span>
                   </div>
-                  <p className="text-sm text-[#334155] leading-relaxed">{selectedFeedbackForView.reply}</p>
+                  <p className="text-sm text-[#334155] leading-relaxed">
+                    {selectedFeedbackForView.reply}
+                  </p>
                 </div>
               </div>
             </div>

@@ -1,5 +1,15 @@
 import { useState, useRef, useEffect } from "react";
-import { MessageSquare, Search, CheckCircle2, Clock, Send, Plus, User, Calendar, ArrowLeft } from "lucide-react";
+import {
+  MessageSquare,
+  Search,
+  CheckCircle2,
+  Clock,
+  Send,
+  Plus,
+  User,
+  Calendar,
+  ArrowLeft,
+} from "lucide-react";
 import { ContentCard } from "../components/ContentCard";
 import { StatCard } from "../components/StatCard";
 import { Input } from "../components/ui/input";
@@ -7,7 +17,7 @@ import { Textarea } from "../components/ui/textarea";
 import { ConfirmationModal } from "../components/ConfirmationModal";
 import { ScrollArea } from "../components/ui/scroll-area";
 import { Label } from "../components/ui/label";
-import { toast } from "sonner@2.0.3";
+import { toast } from "sonner";
 
 interface Message {
   id: string;
@@ -47,7 +57,8 @@ const mockInquiries: Inquiry[] = [
         id: "msg-001",
         sender: "client",
         senderName: "Maria Santos",
-        content: "Hi! I'm interested in the Boracay 5-Day Beach Escape package. Can you provide more details about what's included in the ₱4,500 per person price?",
+        content:
+          "Hi! I'm interested in the Boracay 5-Day Beach Escape package. Can you provide more details about what's included in the ₱4,500 per person price?",
         timestamp: new Date("2024-01-15T09:30:00"),
         read: true,
       },
@@ -55,7 +66,8 @@ const mockInquiries: Inquiry[] = [
         id: "msg-002",
         sender: "admin",
         senderName: "Admin",
-        content: "Hello Maria! Thank you for your interest. The ₱4,500 per person includes accommodation for 4 nights, daily breakfast, island hopping tour, airport transfers, and tour guide services. Flights and lunch/dinner are not included.",
+        content:
+          "Hello Maria! Thank you for your interest. The ₱4,500 per person includes accommodation for 4 nights, daily breakfast, island hopping tour, airport transfers, and tour guide services. Flights and lunch/dinner are not included.",
         timestamp: new Date("2024-01-15T10:15:00"),
         read: true,
       },
@@ -63,7 +75,8 @@ const mockInquiries: Inquiry[] = [
         id: "msg-003",
         sender: "client",
         senderName: "Maria Santos",
-        content: "Thank you! Do you have any available slots for the first week of March? We're a group of 6 people.",
+        content:
+          "Thank you! Do you have any available slots for the first week of March? We're a group of 6 people.",
         timestamp: new Date("2024-01-15T14:20:00"),
         read: false,
       },
@@ -92,7 +105,8 @@ const mockInquiries: Inquiry[] = [
         id: "msg-004",
         sender: "client",
         senderName: "Roberto dela Cruz",
-        content: "Good day! I'd like to customize the Palawan Underground River package. Can we add an extra day for island hopping in El Nido?",
+        content:
+          "Good day! I'd like to customize the Palawan Underground River package. Can we add an extra day for island hopping in El Nido?",
         timestamp: new Date("2024-01-14T16:45:00"),
         read: true,
       },
@@ -100,7 +114,8 @@ const mockInquiries: Inquiry[] = [
         id: "msg-005",
         sender: "admin",
         senderName: "Admin - Ana Reyes",
-        content: "Hello Roberto! Absolutely, we can customize the package for you. Adding an extra day for El Nido island hopping would cost an additional ₱3,200 per person, which includes boat rental, lunch, and snorkeling equipment.",
+        content:
+          "Hello Roberto! Absolutely, we can customize the package for you. Adding an extra day for El Nido island hopping would cost an additional ₱3,200 per person, which includes boat rental, lunch, and snorkeling equipment.",
         timestamp: new Date("2024-01-15T09:00:00"),
         read: true,
       },
@@ -129,7 +144,8 @@ const mockInquiries: Inquiry[] = [
         id: "msg-007",
         sender: "client",
         senderName: "Lisa Mendoza",
-        content: "Hi! What payment methods do you accept? And is there an installment option available?",
+        content:
+          "Hi! What payment methods do you accept? And is there an installment option available?",
         timestamp: new Date("2024-01-13T13:20:00"),
         read: true,
       },
@@ -137,7 +153,8 @@ const mockInquiries: Inquiry[] = [
         id: "msg-008",
         sender: "admin",
         senderName: "Admin - Carlos Santos",
-        content: "Hello Lisa! We accept bank transfers, GCash, PayMaya, and credit cards. Yes, we do offer installment plans. You can pay 50% down payment and the remaining 50% at least 2 weeks before your travel date.",
+        content:
+          "Hello Lisa! We accept bank transfers, GCash, PayMaya, and credit cards. Yes, we do offer installment plans. You can pay 50% down payment and the remaining 50% at least 2 weeks before your travel date.",
         timestamp: new Date("2024-01-13T15:30:00"),
         read: true,
       },
@@ -145,7 +162,8 @@ const mockInquiries: Inquiry[] = [
         id: "msg-009",
         sender: "client",
         senderName: "Lisa Mendoza",
-        content: "Perfect! That works for me. Thank you so much for the information!",
+        content:
+          "Perfect! That works for me. Thank you so much for the information!",
         timestamp: new Date("2024-01-14T10:00:00"),
         read: true,
       },
@@ -166,7 +184,8 @@ const mockInquiries: Inquiry[] = [
         id: "msg-010",
         sender: "client",
         senderName: "Miguel Torres",
-        content: "Hello! Our company is planning a team building event in Baguio for 25 people. Do you offer group discounts?",
+        content:
+          "Hello! Our company is planning a team building event in Baguio for 25 people. Do you offer group discounts?",
         timestamp: new Date("2024-01-12T08:15:00"),
         read: true,
       },
@@ -174,7 +193,8 @@ const mockInquiries: Inquiry[] = [
         id: "msg-011",
         sender: "admin",
         senderName: "Admin",
-        content: "Hi Miguel! Yes, we offer group discounts for 20+ people. For your group size, we can offer a 15% discount on the total package price. Would you like me to prepare a customized quotation?",
+        content:
+          "Hi Miguel! Yes, we offer group discounts for 20+ people. For your group size, we can offer a 15% discount on the total package price. Would you like me to prepare a customized quotation?",
         timestamp: new Date("2024-01-12T10:30:00"),
         read: true,
       },
@@ -182,7 +202,8 @@ const mockInquiries: Inquiry[] = [
         id: "msg-012",
         sender: "client",
         senderName: "Miguel Torres",
-        content: "Yes please! We're looking at the first week of February. Can you also include team building activities?",
+        content:
+          "Yes please! We're looking at the first week of February. Can you also include team building activities?",
         timestamp: new Date("2024-01-12T16:45:00"),
         read: true,
       },
@@ -203,7 +224,8 @@ const mockInquiries: Inquiry[] = [
         id: "msg-013",
         sender: "client",
         senderName: "Sarah Johnson",
-        content: "Hi! I'm visiting from the US. Do I need a visa to visit the Philippines? And do you assist with visa processing?",
+        content:
+          "Hi! I'm visiting from the US. Do I need a visa to visit the Philippines? And do you assist with visa processing?",
         timestamp: new Date("2024-01-11T11:00:00"),
         read: true,
       },
@@ -211,7 +233,8 @@ const mockInquiries: Inquiry[] = [
         id: "msg-014",
         sender: "admin",
         senderName: "Admin - Ana Reyes",
-        content: "Hello Sarah! US citizens can enter the Philippines visa-free for up to 30 days. While we don't directly process visas, we can provide you with the necessary documents like tour confirmations and hotel bookings to support your travel.",
+        content:
+          "Hello Sarah! US citizens can enter the Philippines visa-free for up to 30 days. While we don't directly process visas, we can provide you with the necessary documents like tour confirmations and hotel bookings to support your travel.",
         timestamp: new Date("2024-01-11T13:00:00"),
         read: true,
       },
@@ -232,7 +255,9 @@ export function Inquiries() {
   const [selectedInquiry, setSelectedInquiry] = useState<Inquiry | null>(null);
   const [messageInput, setMessageInput] = useState("");
   const [inquiries, setInquiries] = useState<Inquiry[]>(mockInquiries);
-  const [filterStatus, setFilterStatus] = useState<"all" | "open" | "resolved">("all");
+  const [filterStatus, setFilterStatus] = useState<"all" | "open" | "resolved">(
+    "all"
+  );
   const [newInquiryModalOpen, setNewInquiryModalOpen] = useState(false);
   const [markResolvedModalOpen, setMarkResolvedModalOpen] = useState(false);
   const [reopenModalOpen, setReopenModalOpen] = useState(false);
@@ -255,14 +280,15 @@ export function Inquiries() {
   };
 
   // Filter inquiries
-  const filteredInquiries = inquiries.filter(inquiry => {
-    const matchesSearch = 
+  const filteredInquiries = inquiries.filter((inquiry) => {
+    const matchesSearch =
       inquiry.subject.toLowerCase().includes(searchQuery.toLowerCase()) ||
       inquiry.clientName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       inquiry.id.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    const matchesStatus = filterStatus === "all" || inquiry.status === filterStatus;
-    
+
+    const matchesStatus =
+      filterStatus === "all" || inquiry.status === filterStatus;
+
     return matchesSearch && matchesStatus;
   });
 
@@ -279,7 +305,7 @@ export function Inquiries() {
       read: true,
     };
 
-    const updatedInquiries = inquiries.map(inq => {
+    const updatedInquiries = inquiries.map((inq) => {
       if (inq.id === selectedInquiry.id) {
         return {
           ...inq,
@@ -298,7 +324,7 @@ export function Inquiries() {
     });
     setMessageInput("");
     toast.success("Message sent successfully!");
-    
+
     // Auto scroll to the new message
     setTimeout(() => {
       scrollToBottom();
@@ -308,8 +334,8 @@ export function Inquiries() {
   // Handle mark as resolved
   const handleMarkAsResolved = () => {
     if (!selectedInquiry) return;
-    
-    const updatedInquiries = inquiries.map(inq => {
+
+    const updatedInquiries = inquiries.map((inq) => {
       if (inq.id === selectedInquiry.id) {
         return { ...inq, status: "resolved" as const };
       }
@@ -325,8 +351,8 @@ export function Inquiries() {
   // Handle reopen inquiry
   const handleReopenInquiry = () => {
     if (!selectedInquiry) return;
-    
-    const updatedInquiries = inquiries.map(inq => {
+
+    const updatedInquiries = inquiries.map((inq) => {
       if (inq.id === selectedInquiry.id) {
         return { ...inq, status: "open" as const };
       }
@@ -341,13 +367,18 @@ export function Inquiries() {
 
   // Handle create new inquiry
   const handleCreateInquiry = () => {
-    if (!newInquiryForm.subject || !newInquiryForm.clientName || !newInquiryForm.clientEmail || !newInquiryForm.message) {
+    if (
+      !newInquiryForm.subject ||
+      !newInquiryForm.clientName ||
+      !newInquiryForm.clientEmail ||
+      !newInquiryForm.message
+    ) {
       toast.error("Please fill in all required fields");
       return;
     }
 
     const newInquiry: Inquiry = {
-      id: `INQ-2024-${String(inquiries.length + 1).padStart(3, '0')}`,
+      id: `INQ-2024-${String(inquiries.length + 1).padStart(3, "0")}`,
       subject: newInquiryForm.subject,
       clientName: newInquiryForm.clientName,
       clientEmail: newInquiryForm.clientEmail,
@@ -384,12 +415,12 @@ export function Inquiries() {
   // Handle open inquiry
   const handleOpenInquiry = (inquiry: Inquiry) => {
     // Mark all messages as read
-    const updatedInquiries = inquiries.map(inq => {
+    const updatedInquiries = inquiries.map((inq) => {
       if (inq.id === inquiry.id) {
         return {
           ...inq,
           unreadCount: 0,
-          messages: inq.messages.map(msg => ({ ...msg, read: true })),
+          messages: inq.messages.map((msg) => ({ ...msg, read: true })),
         };
       }
       return inq;
@@ -399,7 +430,7 @@ export function Inquiries() {
     setSelectedInquiry({
       ...inquiry,
       unreadCount: 0,
-      messages: inquiry.messages.map(msg => ({ ...msg, read: true })),
+      messages: inquiry.messages.map((msg) => ({ ...msg, read: true })),
     });
   };
 
@@ -421,7 +452,9 @@ export function Inquiries() {
   // Find first unread message index
   const getFirstUnreadIndex = () => {
     if (!selectedInquiry) return -1;
-    return selectedInquiry.messages.findIndex(msg => msg.sender === "client" && !msg.read);
+    return selectedInquiry.messages.findIndex(
+      (msg) => msg.sender === "client" && !msg.read
+    );
   };
 
   const firstUnreadIndex = getFirstUnreadIndex();
@@ -441,16 +474,22 @@ export function Inquiries() {
               </button>
               <div className="flex-1">
                 <div className="flex items-center gap-3">
-                  <h2 className="text-xl font-semibold text-[#1A2B4F]">{selectedInquiry.subject}</h2>
-                  <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                    selectedInquiry.status === "open"
-                      ? "bg-[rgba(10,122,255,0.1)] text-[#0A7AFF] border border-[rgba(10,122,255,0.2)]"
-                      : "bg-[rgba(16,185,129,0.1)] text-[#10B981] border border-[rgba(16,185,129,0.2)]"
-                  }`}>
+                  <h2 className="text-xl font-semibold text-[#1A2B4F]">
+                    {selectedInquiry.subject}
+                  </h2>
+                  <span
+                    className={`px-3 py-1 rounded-full text-xs font-medium ${
+                      selectedInquiry.status === "open"
+                        ? "bg-[rgba(10,122,255,0.1)] text-[#0A7AFF] border border-[rgba(10,122,255,0.2)]"
+                        : "bg-[rgba(16,185,129,0.1)] text-[#10B981] border border-[rgba(16,185,129,0.2)]"
+                    }`}
+                  >
                     {selectedInquiry.status === "open" ? "Open" : "Resolved"}
                   </span>
                 </div>
-                <p className="text-sm text-[#64748B] mt-1">{selectedInquiry.id}</p>
+                <p className="text-sm text-[#64748B] mt-1">
+                  {selectedInquiry.id}
+                </p>
               </div>
             </div>
           }
@@ -458,7 +497,7 @@ export function Inquiries() {
             selectedInquiry.status === "open" ? (
               <button
                 onClick={() => setMarkResolvedModalOpen(true)}
-                className="h-10 px-5 rounded-[20px] bg-gradient-to-r from-[#10B981] to-[#14B8A6] text-white text-sm font-medium shadow-[0_2px_8px_rgba(16,185,129,0.25)] flex items-center gap-2 transition-all duration-200 hover:-translate-y-0.5"
+                className="h-10 px-5 rounded-[20px] bg-linear-to-r from-[#10B981] to-[#14B8A6] text-white text-sm font-medium shadow-[0_2px_8px_rgba(16,185,129,0.25)] flex items-center gap-2 transition-all duration-200 hover:-translate-y-0.5"
               >
                 <CheckCircle2 className="w-4 h-4" />
                 Mark as Resolved
@@ -475,29 +514,35 @@ export function Inquiries() {
           }
         >
           {/* Client Info Card */}
-          <div className="mb-6 p-4 rounded-xl bg-gradient-to-br from-[rgba(10,122,255,0.05)] to-[rgba(20,184,166,0.05)] border-2 border-[rgba(10,122,255,0.1)]">
+          <div className="mb-6 p-4 rounded-xl bg-linear-to-br from-[rgba(10,122,255,0.05)] to-[rgba(20,184,166,0.05)] border-2 border-[rgba(10,122,255,0.1)]">
             <div className="flex items-start gap-4">
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#0A7AFF] to-[#14B8A6] flex items-center justify-center shadow-lg shadow-[#0A7AFF]/20">
+              <div className="w-12 h-12 rounded-xl bg-linear-to-br from-[#0A7AFF] to-[#14B8A6] flex items-center justify-center shadow-lg shadow-[#0A7AFF]/20">
                 <User className="w-6 h-6 text-white" />
               </div>
               <div className="flex-1">
-                <h3 className="font-semibold text-[#1A2B4F] mb-2">{selectedInquiry.clientName}</h3>
+                <h3 className="font-semibold text-[#1A2B4F] mb-2">
+                  {selectedInquiry.clientName}
+                </h3>
                 <div className="grid grid-cols-3 gap-4">
                   <div>
                     <p className="text-xs text-[#64748B] mb-1">Email</p>
-                    <p className="text-sm text-[#334155] font-medium">{selectedInquiry.clientEmail}</p>
+                    <p className="text-sm text-[#334155] font-medium">
+                      {selectedInquiry.clientEmail}
+                    </p>
                   </div>
                   <div>
                     <p className="text-xs text-[#64748B] mb-1">Mobile</p>
-                    <p className="text-sm text-[#334155] font-medium">{selectedInquiry.clientMobile}</p>
+                    <p className="text-sm text-[#334155] font-medium">
+                      {selectedInquiry.clientMobile}
+                    </p>
                   </div>
                   <div>
                     <p className="text-xs text-[#64748B] mb-1">Created</p>
                     <p className="text-sm text-[#334155] font-medium">
-                      {selectedInquiry.createdDate.toLocaleDateString("en-PH", { 
-                        month: "short", 
-                        day: "numeric", 
-                        year: "numeric" 
+                      {selectedInquiry.createdDate.toLocaleDateString("en-PH", {
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
                       })}
                     </p>
                   </div>
@@ -507,7 +552,7 @@ export function Inquiries() {
           </div>
 
           {/* Messages */}
-          <ScrollArea className="h-[450px] mb-6 p-4 rounded-xl border-2 border-[#E5E7EB] bg-white">
+          <ScrollArea className="h-112.5 mb-6 p-4 rounded-xl border-2 border-[#E5E7EB] bg-white">
             <div className="space-y-4">
               {selectedInquiry.messages.map((message, index) => (
                 <div key={message.id}>
@@ -516,28 +561,52 @@ export function Inquiries() {
                     <div className="flex items-center gap-3 my-6">
                       <div className="flex-1 h-px bg-[#FF6B6B]"></div>
                       <span className="text-xs font-semibold text-[#FF6B6B] bg-[rgba(255,107,107,0.1)] px-3 py-1 rounded-full border border-[rgba(255,107,107,0.2)]">
-                        {selectedInquiry.messages.filter(msg => msg.sender === "client" && !msg.read).length} Unread Message{selectedInquiry.messages.filter(msg => msg.sender === "client" && !msg.read).length > 1 ? 's' : ''}
+                        {
+                          selectedInquiry.messages.filter(
+                            (msg) => msg.sender === "client" && !msg.read
+                          ).length
+                        }{" "}
+                        Unread Message
+                        {selectedInquiry.messages.filter(
+                          (msg) => msg.sender === "client" && !msg.read
+                        ).length > 1
+                          ? "s"
+                          : ""}
                       </span>
                       <div className="flex-1 h-px bg-[#FF6B6B]"></div>
                     </div>
                   )}
-                  
+
                   <div
-                    className={`flex ${message.sender === "admin" ? "justify-end" : "justify-start"}`}
+                    className={`flex ${
+                      message.sender === "admin"
+                        ? "justify-end"
+                        : "justify-start"
+                    }`}
                   >
-                    <div className={`max-w-[70%] ${message.sender === "admin" ? "order-2" : "order-1"}`}>
+                    <div
+                      className={`max-w-[70%] ${
+                        message.sender === "admin" ? "order-2" : "order-1"
+                      }`}
+                    >
                       <div className="flex items-center gap-2 mb-1">
-                        <span className="text-xs font-medium text-[#64748B]">{message.senderName}</span>
-                        <span className="text-xs text-[#94A3B8]">{formatTimestamp(message.timestamp)}</span>
+                        <span className="text-xs font-medium text-[#64748B]">
+                          {message.senderName}
+                        </span>
+                        <span className="text-xs text-[#94A3B8]">
+                          {formatTimestamp(message.timestamp)}
+                        </span>
                       </div>
                       <div
                         className={`p-4 rounded-2xl ${
                           message.sender === "admin"
-                            ? "bg-gradient-to-br from-[#0A7AFF] to-[#14B8A6] text-white rounded-tr-sm"
+                            ? "bg-linear-to-br from-[#0A7AFF] to-[#14B8A6] text-white rounded-tr-sm"
                             : "bg-[#F8FAFB] border-2 border-[#E5E7EB] text-[#334155] rounded-tl-sm"
                         }`}
                       >
-                        <p className="text-sm leading-relaxed">{message.content}</p>
+                        <p className="text-sm leading-relaxed">
+                          {message.content}
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -555,7 +624,7 @@ export function Inquiries() {
                   value={messageInput}
                   onChange={(e) => setMessageInput(e.target.value)}
                   placeholder="Type your response..."
-                  className="min-h-[60px] border-[#E5E7EB] focus:border-[#14B8A6] focus:ring-[#14B8A6]/10 resize-none"
+                  className="min-h-15 border-[#E5E7EB] focus:border-[#14B8A6] focus:ring-[#14B8A6]/10 resize-none"
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && !e.shiftKey) {
                       e.preventDefault();
@@ -567,7 +636,7 @@ export function Inquiries() {
               <button
                 onClick={handleSendMessage}
                 disabled={!messageInput.trim()}
-                className="h-[60px] px-6 rounded-xl bg-gradient-to-r from-[#0A7AFF] to-[#14B8A6] text-white flex items-center justify-center gap-2 font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-lg hover:shadow-[#0A7AFF]/20"
+                className="h-15 px-6 rounded-xl bg-linear-to-r from-[#0A7AFF] to-[#14B8A6] text-white flex items-center justify-center gap-2 font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-lg hover:shadow-[#0A7AFF]/20"
               >
                 <Send className="w-5 h-5" />
                 Send
@@ -589,7 +658,11 @@ export function Inquiries() {
           contentBorder="border-[rgba(16,185,129,0.2)]"
           content={
             <p className="text-sm text-[#334155] leading-relaxed">
-              Mark inquiry from <span className="font-semibold text-[#10B981]">{selectedInquiry.clientName}</span> as resolved?
+              Mark inquiry from{" "}
+              <span className="font-semibold text-[#10B981]">
+                {selectedInquiry.clientName}
+              </span>{" "}
+              as resolved?
             </p>
           }
           onConfirm={handleMarkAsResolved}
@@ -612,7 +685,11 @@ export function Inquiries() {
           contentBorder="border-[rgba(10,122,255,0.2)]"
           content={
             <p className="text-sm text-[#334155] leading-relaxed">
-              Reopen inquiry from <span className="font-semibold text-[#0A7AFF]">{selectedInquiry.clientName}</span>?
+              Reopen inquiry from{" "}
+              <span className="font-semibold text-[#0A7AFF]">
+                {selectedInquiry.clientName}
+              </span>
+              ?
             </p>
           }
           onConfirm={handleReopenInquiry}
@@ -640,14 +717,16 @@ export function Inquiries() {
         <StatCard
           icon={Clock}
           label="Open Inquiries"
-          value={inquiries.filter(i => i.status === "open").length.toString()}
+          value={inquiries.filter((i) => i.status === "open").length.toString()}
           gradientFrom="#FFB84D"
           gradientTo="#FB7185"
         />
         <StatCard
           icon={CheckCircle2}
           label="Resolved"
-          value={inquiries.filter(i => i.status === "resolved").length.toString()}
+          value={inquiries
+            .filter((i) => i.status === "resolved")
+            .length.toString()}
           gradientFrom="#10B981"
           gradientTo="#14B8A6"
         />
@@ -659,7 +738,9 @@ export function Inquiries() {
           <button
             onClick={() => setNewInquiryModalOpen(true)}
             className="h-10 px-5 rounded-[20px] text-white text-sm font-medium shadow-[0_2px_8px_rgba(10,122,255,0.25)] flex items-center gap-2 transition-all duration-200 hover:-translate-y-0.5"
-            style={{ background: `linear-gradient(135deg, var(--gradient-from), var(--gradient-to))` }}
+            style={{
+              background: `linear-gradient(135deg, var(--gradient-from), var(--gradient-to))`,
+            }}
           >
             <Plus className="w-4 h-4" />
             New Inquiry
@@ -686,7 +767,13 @@ export function Inquiries() {
                   ? "text-white shadow-sm"
                   : "text-[#64748B] dark:text-white hover:text-[#0A7AFF] dark:hover:text-white hover:bg-[rgba(10,122,255,0.05)] dark:hover:bg-[rgba(255,255,255,0.15)]"
               }`}
-              style={filterStatus === "all" ? { background: `linear-gradient(135deg, var(--gradient-from), var(--gradient-to))` } : {}}
+              style={
+                filterStatus === "all"
+                  ? {
+                      background: `linear-gradient(135deg, var(--gradient-from), var(--gradient-to))`,
+                    }
+                  : {}
+              }
             >
               All
             </button>
@@ -697,7 +784,13 @@ export function Inquiries() {
                   ? "text-white shadow-sm"
                   : "text-[#64748B] dark:text-white hover:text-[#0A7AFF] dark:hover:text-white hover:bg-[rgba(10,122,255,0.05)] dark:hover:bg-[rgba(255,255,255,0.15)]"
               }`}
-              style={filterStatus === "open" ? { background: `linear-gradient(135deg, var(--gradient-from), var(--gradient-to))` } : {}}
+              style={
+                filterStatus === "open"
+                  ? {
+                      background: `linear-gradient(135deg, var(--gradient-from), var(--gradient-to))`,
+                    }
+                  : {}
+              }
             >
               Open
             </button>
@@ -708,7 +801,13 @@ export function Inquiries() {
                   ? "text-white shadow-sm"
                   : "text-[#64748B] dark:text-white hover:text-[#0A7AFF] dark:hover:text-white hover:bg-[rgba(10,122,255,0.05)] dark:hover:bg-[rgba(255,255,255,0.15)]"
               }`}
-              style={filterStatus === "resolved" ? { background: `linear-gradient(135deg, var(--gradient-from), var(--gradient-to))` } : {}}
+              style={
+                filterStatus === "resolved"
+                  ? {
+                      background: `linear-gradient(135deg, var(--gradient-from), var(--gradient-to))`,
+                    }
+                  : {}
+              }
             >
               Resolved
             </button>
@@ -725,30 +824,38 @@ export function Inquiries() {
             >
               <div className="flex items-start justify-between mb-3">
                 <div className="flex items-start gap-3 flex-1">
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-                    inquiry.status === "open"
-                      ? "bg-gradient-to-br from-[#0A7AFF] to-[#14B8A6]"
-                      : "bg-gradient-to-br from-[#10B981] to-[#14B8A6]"
-                  }`}>
+                  <div
+                    className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                      inquiry.status === "open"
+                        ? "bg-linear-to-br from-[#0A7AFF] to-[#14B8A6]"
+                        : "bg-linear-to-br from-[#10B981] to-[#14B8A6]"
+                    }`}
+                  >
                     <MessageSquare className="w-5 h-5 text-white" />
                   </div>
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
-                      <h3 className="font-semibold text-[#1A2B4F] dark:text-[#E5E7EB]">{inquiry.subject}</h3>
+                      <h3 className="font-semibold text-[#1A2B4F] dark:text-[#E5E7EB]">
+                        {inquiry.subject}
+                      </h3>
                       {inquiry.unreadCount > 0 && (
                         <span className="px-2 py-0.5 rounded-full bg-[#FF6B6B] text-white text-xs font-medium">
                           {inquiry.unreadCount} new
                         </span>
                       )}
-                      <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${
-                        inquiry.status === "open"
-                          ? "bg-[rgba(10,122,255,0.1)] dark:bg-[rgba(10,122,255,0.2)] text-[#0A7AFF] dark:text-[#3B9EFF] border border-[rgba(10,122,255,0.2)] dark:border-[rgba(10,122,255,0.3)]"
-                          : "bg-[rgba(16,185,129,0.1)] dark:bg-[rgba(16,185,129,0.2)] text-[#10B981] dark:text-[#14B8A6] border border-[rgba(16,185,129,0.2)] dark:border-[rgba(16,185,129,0.3)]"
-                      }`}>
+                      <span
+                        className={`px-2.5 py-1 rounded-full text-xs font-medium ${
+                          inquiry.status === "open"
+                            ? "bg-[rgba(10,122,255,0.1)] dark:bg-[rgba(10,122,255,0.2)] text-[#0A7AFF] dark:text-[#3B9EFF] border border-[rgba(10,122,255,0.2)] dark:border-[rgba(10,122,255,0.3)]"
+                            : "bg-[rgba(16,185,129,0.1)] dark:bg-[rgba(16,185,129,0.2)] text-[#10B981] dark:text-[#14B8A6] border border-[rgba(16,185,129,0.2)] dark:border-[rgba(16,185,129,0.3)]"
+                        }`}
+                      >
                         {inquiry.status === "open" ? "Open" : "Resolved"}
                       </span>
                     </div>
-                    <p className="text-sm text-[#64748B] dark:text-[#94A3B8] mb-2">{inquiry.id}</p>
+                    <p className="text-sm text-[#64748B] dark:text-[#94A3B8] mb-2">
+                      {inquiry.id}
+                    </p>
                     <div className="flex items-center gap-4 text-sm text-[#64748B] dark:text-[#94A3B8]">
                       <div className="flex items-center gap-1.5">
                         <User className="w-4 h-4" />
@@ -756,7 +863,9 @@ export function Inquiries() {
                       </div>
                       <div className="flex items-center gap-1.5">
                         <Calendar className="w-4 h-4" />
-                        <span>Last updated {formatTimestamp(inquiry.lastUpdated)}</span>
+                        <span>
+                          Last updated {formatTimestamp(inquiry.lastUpdated)}
+                        </span>
                       </div>
                       <div className="flex items-center gap-1.5">
                         <MessageSquare className="w-4 h-4" />
@@ -776,13 +885,15 @@ export function Inquiries() {
 
           {filteredInquiries.length === 0 && (
             <div className="text-center py-12">
-              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[rgba(10,122,255,0.1)] to-[rgba(20,184,166,0.1)] dark:from-[rgba(10,122,255,0.2)] dark:to-[rgba(20,184,166,0.2)] flex items-center justify-center mx-auto mb-4">
+              <div className="w-16 h-16 rounded-2xl bg-linear-to-br from-[rgba(10,122,255,0.1)] to-[rgba(20,184,166,0.1)] dark:from-[rgba(10,122,255,0.2)] dark:to-[rgba(20,184,166,0.2)] flex items-center justify-center mx-auto mb-4">
                 <MessageSquare className="w-8 h-8 text-[#0A7AFF] dark:text-[#3B9EFF]" />
               </div>
-              <h3 className="font-semibold text-[#1A2B4F] dark:text-[#E5E7EB] mb-2">No inquiries found</h3>
+              <h3 className="font-semibold text-[#1A2B4F] dark:text-[#E5E7EB] mb-2">
+                No inquiries found
+              </h3>
               <p className="text-sm text-[#64748B] dark:text-[#94A3B8]">
-                {searchQuery 
-                  ? "Try adjusting your search criteria" 
+                {searchQuery
+                  ? "Try adjusting your search criteria"
                   : "New inquiries will appear here"}
               </p>
             </div>
@@ -810,47 +921,76 @@ export function Inquiries() {
               <Input
                 id="subject"
                 value={newInquiryForm.subject}
-                onChange={(e) => setNewInquiryForm({ ...newInquiryForm, subject: e.target.value })}
+                onChange={(e) =>
+                  setNewInquiryForm({
+                    ...newInquiryForm,
+                    subject: e.target.value,
+                  })
+                }
                 placeholder="Enter inquiry subject"
                 className="h-11 border-[#E5E7EB] focus:border-[#14B8A6] focus:ring-[#14B8A6]/10"
               />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="clientName" className="text-[#1A2B4F] mb-2 block">
+                <Label
+                  htmlFor="clientName"
+                  className="text-[#1A2B4F] mb-2 block"
+                >
                   Client Name <span className="text-[#FF6B6B]">*</span>
                 </Label>
                 <Input
                   id="clientName"
                   value={newInquiryForm.clientName}
-                  onChange={(e) => setNewInquiryForm({ ...newInquiryForm, clientName: e.target.value })}
+                  onChange={(e) =>
+                    setNewInquiryForm({
+                      ...newInquiryForm,
+                      clientName: e.target.value,
+                    })
+                  }
                   placeholder="Enter client name"
                   className="h-11 border-[#E5E7EB] focus:border-[#14B8A6] focus:ring-[#14B8A6]/10"
                 />
               </div>
               <div>
-                <Label htmlFor="clientEmail" className="text-[#1A2B4F] mb-2 block">
+                <Label
+                  htmlFor="clientEmail"
+                  className="text-[#1A2B4F] mb-2 block"
+                >
                   Email <span className="text-[#FF6B6B]">*</span>
                 </Label>
                 <Input
                   id="clientEmail"
                   type="email"
                   value={newInquiryForm.clientEmail}
-                  onChange={(e) => setNewInquiryForm({ ...newInquiryForm, clientEmail: e.target.value })}
+                  onChange={(e) =>
+                    setNewInquiryForm({
+                      ...newInquiryForm,
+                      clientEmail: e.target.value,
+                    })
+                  }
                   placeholder="client@email.com"
                   className="h-11 border-[#E5E7EB] focus:border-[#14B8A6] focus:ring-[#14B8A6]/10"
                 />
               </div>
             </div>
             <div>
-              <Label htmlFor="clientMobile" className="text-[#1A2B4F] mb-2 block">
+              <Label
+                htmlFor="clientMobile"
+                className="text-[#1A2B4F] mb-2 block"
+              >
                 Mobile Number
               </Label>
               <Input
                 id="clientMobile"
                 type="tel"
                 value={newInquiryForm.clientMobile}
-                onChange={(e) => setNewInquiryForm({ ...newInquiryForm, clientMobile: e.target.value })}
+                onChange={(e) =>
+                  setNewInquiryForm({
+                    ...newInquiryForm,
+                    clientMobile: e.target.value,
+                  })
+                }
                 placeholder="+63 9XX XXX XXXX"
                 className="h-11 border-[#E5E7EB] focus:border-[#14B8A6] focus:ring-[#14B8A6]/10"
               />
@@ -862,9 +1002,14 @@ export function Inquiries() {
               <Textarea
                 id="message"
                 value={newInquiryForm.message}
-                onChange={(e) => setNewInquiryForm({ ...newInquiryForm, message: e.target.value })}
+                onChange={(e) =>
+                  setNewInquiryForm({
+                    ...newInquiryForm,
+                    message: e.target.value,
+                  })
+                }
                 placeholder="Enter the client's inquiry message..."
-                className="min-h-[120px] border-[#E5E7EB] focus:border-[#14B8A6] focus:ring-[#14B8A6]/10 resize-none"
+                className="min-h-30 border-[#E5E7EB] focus:border-[#14B8A6] focus:ring-[#14B8A6]/10 resize-none"
               />
             </div>
           </div>

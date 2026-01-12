@@ -5,11 +5,3 @@ node_modules
 .env.production
 
 build
-
-public/
-src/
-index.html/
-package.json
-package-lock.json
-vercel.json
-vite.config.js
